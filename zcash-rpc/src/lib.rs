@@ -80,19 +80,19 @@ pub trait Zcash {
         blockhash: bitcoin::BlockHash,
         verbosity: Option<usize>,
     ) -> Result<Block, jsonrpsee::core::Error>;
-    // #[method(name = "gettransaction")]
-    // async fn gettransaction(
-    //     &self,
-    //     txid: bitcoin::Txid,
-    //     include_watchonly: Option<bool>,
-    // ) -> Result<serde_json::Value, jsonrpsee::core::Error>;
-    // #[method(name = "getrawtransaction")]
-    // async fn getrawtransaction(
-    //     &self,
-    //     txid: bitcoin::Txid,
-    //     verbose: Option<bool>,
-    //     blockhash: Option<bitcoin::BlockHash>,
-    // ) -> Result<serde_json::Value, jsonrpsee::core::Error>;
+    #[method(name = "gettransaction")]
+    async fn gettransaction(
+        &self,
+        txid: bitcoin::Txid,
+        include_watchonly: Option<bool>,
+    ) -> Result<serde_json::Value, jsonrpsee::core::Error>;
+    #[method(name = "getrawtransaction")]
+    async fn getrawtransaction(
+        &self,
+        txid: bitcoin::Txid,
+        verbose: Option<bool>,
+        blockhash: Option<bitcoin::BlockHash>,
+    ) -> Result<serde_json::Value, jsonrpsee::core::Error>;
 }
 
 #[cfg(test)]
@@ -125,26 +125,26 @@ mod tests {
             )
             .await
             .unwrap());
-        // dbg!(zcash
-        //     .gettransaction(
-        //         bitcoin::Txid::from_str(
-        //             "9a71b5c02401536672b2947d7ce3200ba59cbf79427c059f549b19ae0c7632c1"
-        //         )
-        //         .unwrap(),
-        //         None,
-        //     )
-        //     .await
-        //     .unwrap());
-        // dbg!(zcash
-        //     .getrawtransaction(
-        //         bitcoin::Txid::from_str(
-        //             "9a71b5c02401536672b2947d7ce3200ba59cbf79427c059f549b19ae0c7632c1"
-        //         )
-        //         .unwrap(),
-        //         Some(true),
-        //         None,
-        //     )
-        //     .await
-        //     .unwrap());
+        dbg!(zcash
+            .gettransaction(
+                bitcoin::Txid::from_str(
+                    "9a71b5c02401536672b2947d7ce3200ba59cbf79427c059f549b19ae0c7632c1"
+                )
+                .unwrap(),
+                None,
+            )
+            .await
+            .unwrap());
+        dbg!(zcash
+            .getrawtransaction(
+                bitcoin::Txid::from_str(
+                    "9a71b5c02401536672b2947d7ce3200ba59cbf79427c059f549b19ae0c7632c1"
+                )
+                .unwrap(),
+                Some(true),
+                None,
+            )
+            .await
+            .unwrap());
     }
 }
