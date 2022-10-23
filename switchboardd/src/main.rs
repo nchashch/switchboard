@@ -10,14 +10,21 @@ use switchboard_launcher::*;
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[arg(short, long)]
-    config_path: PathBuf,
+    config_path: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
-    let config: Config = confy::load_path(args.config_path)?;
-    let Daemons { mut main, mut zcash } = spawn_daemons(&config).await?;
+    let config_path = match args.config_path {
+        Some(config_path) => config_path,
+        None => "./config.toml".into(),
+    };
+    let config: Config = confy::load_path(config_path)?;
+    let Daemons {
+        mut main,
+        mut zcash,
+    } = spawn_daemons(&config).await?;
 
     let (tx, rx) = std::sync::mpsc::channel();
     ctrlc::set_handler(move || {
