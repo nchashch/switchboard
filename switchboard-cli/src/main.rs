@@ -1,7 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use switchboard_launcher::*;
+use switchboard_api::*;
+use switchboard_config::Config;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -18,8 +19,6 @@ fn btc_amount_parser(s: &str) -> Result<bitcoin::Amount, bitcoin::util::amount::
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Launch mainchain and configured sidechain daemons
-    Daemons,
     /// Generate a mainchain block
     Generate {
         number: usize,
@@ -47,11 +46,8 @@ enum Commands {
 async fn main() -> Result<()> {
     let args = Cli::parse();
     let config: Config = confy::load_path(args.config_path)?;
-    let node = Node::new(config)?;
+    let node = Client::new(&config)?;
     match args.commands {
-        Commands::Daemons => {
-            node.run_daemons().await?;
-        }
         Commands::Generate { number, amount } => {
             for hash in node.generate(number, amount).await? {
                 println!("{}", hash);
@@ -59,8 +55,8 @@ async fn main() -> Result<()> {
         }
         Commands::Getbalances => {
             let balances = node.get_balances().await?;
-            println!("main balance:  {:>16}", format!("{}", balances.main.0));
-            println!("zcash balance: {:>16}", format!("{}", balances.zcash.0));
+            println!("main balance:  {:>16}", format!("{}", balances.main));
+            println!("zcash balance: {:>16}", format!("{}", balances.zcash));
         }
         Commands::Getnewaddress { chain } => {
             println!("{}", node.get_new_address(chain).await?);
@@ -71,7 +67,7 @@ async fn main() -> Result<()> {
             fee,
         } => {
             let txid = node
-                .deposit(&sidechain, AmountBtc(amount), AmountBtc(fee))
+                .deposit(sidechain, amount, fee)
                 .await?;
             println!(
                 "created deposit of {} to {} with fee {} and txid = {}",

@@ -1,11 +1,12 @@
 [package]
-name = "switchboard-launcher"
+name = "switchboard-config"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-switchboard-config = { path = "../switchboard-config" }
-sha256 = "1.1.1"
-anyhow = "1.0.66"
+base64 = "0.13.1"
+http = "0.2.8"
+serde = "1.0.147"
+serde_derive = "1.0.147"
