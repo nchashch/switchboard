@@ -2,7 +2,7 @@ use amount_btc::AmountBtc;
 use anyhow::Result;
 pub use bitcoin::Amount;
 use jsonrpsee::http_client::{HeaderMap, HttpClient, HttpClientBuilder};
-use mainchain_rpc::MainClient;
+use main_rpc::MainClient;
 use switchboard_config::Config;
 use zcash_rpc::ZcashClient;
 

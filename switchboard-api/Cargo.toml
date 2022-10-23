@@ -14,7 +14,7 @@ serde_derive = "1.0"
 serde = "1.0"
 rand = "0.8.5"
 jsonrpsee = { version = "0.15.1", features = ["client", "macros"] }
-mainchain-rpc = { path = "../mainchain-rpc" }
+main-rpc = { path = "../main-rpc" }
 zcash-rpc = { path = "../zcash-rpc" }
 amount-btc = { path = "../amount-btc" }
 switchboard-config = { path = "../switchboard-config" }
