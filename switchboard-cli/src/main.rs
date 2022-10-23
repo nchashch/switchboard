@@ -8,7 +8,7 @@ use switchboard_config::Config;
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[arg(short, long)]
-    config_path: PathBuf,
+    config_path: Option<PathBuf>,
     #[command(subcommand)]
     commands: Commands,
 }
@@ -45,7 +45,11 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
-    let config: Config = confy::load_path(args.config_path)?;
+    let config_path = match args.config_path {
+        Some(config_path) => config_path,
+        None => "./config.toml".into(),
+    };
+    let config: Config = confy::load_path(config_path)?;
     let node = Client::new(&config)?;
     match args.commands {
         Commands::Generate { number, amount } => {
@@ -66,9 +70,7 @@ async fn main() -> Result<()> {
             amount,
             fee,
         } => {
-            let txid = node
-                .deposit(sidechain, amount, fee)
-                .await?;
+            let txid = node.deposit(sidechain, amount, fee).await?;
             println!(
                 "created deposit of {} to {} with fee {} and txid = {}",
                 amount, sidechain, fee, txid
