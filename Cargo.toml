@@ -1,0 +1,9 @@
+[workspace]
+members = [
+"amount-btc",
+"mainchain-rpc",
+"zcash-rpc",
+"switchboard-launcher",
+"switchboard-server",
+"switchboard-api",
+]

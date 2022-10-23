@@ -1,0 +1,17 @@
+[package]
+name = "mainchain-rpc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+base64 = "0.13"
+serde = "1.0.145"
+bitcoin = "0.29.1"
+serde_json = "1.0"
+jsonrpsee = { version = "0.15.1", features = ["client", "macros"] }
+amount-btc = { path = "../amount-btc" }
+
+[dev-dependencies]
+tokio = { version = "1.21.2", features = ["rt-multi-thread", "macros"] }
