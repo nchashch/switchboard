@@ -56,6 +56,8 @@ trait ZcashClientT {}
 
 #[rpc(client)]
 pub trait Zcash {
+    #[method(name = "stop")]
+    async fn stop(&self) -> Result<String, jsonrpsee::core::Error>;
     #[method(name = "getbalance")]
     async fn getbalance(
         &self,

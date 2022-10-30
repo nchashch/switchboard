@@ -1,10 +1,12 @@
 use anyhow::Result;
 use clap::Parser;
-use nix::sys::signal::{self, Signal};
-use nix::unistd::Pid;
+use jsonrpsee::http_server::HttpServerBuilder;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use switchboard_config::Config;
 use switchboard_launcher::*;
+use switchboard_rpc::{SwitchboardRpcServer, Switchboardd};
+use switchboard_api::SidechainClient;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -21,19 +23,23 @@ async fn main() -> Result<()> {
         None => "./config.toml".into(),
     };
     let config: Config = confy::load_path(config_path)?;
+    let client = SidechainClient::new(&config)?;
     let Daemons {
         mut main,
         mut zcash,
     } = spawn_daemons(&config).await?;
-
-    let (tx, rx) = std::sync::mpsc::channel();
-    ctrlc::set_handler(move || {
-        tx.send(()).unwrap();
-    })?;
-    rx.recv()?;
-    signal::kill(Pid::from_raw(zcash.id() as i32), Signal::SIGINT).unwrap();
-    signal::kill(Pid::from_raw(main.id() as i32), Signal::SIGINT).unwrap();
-    zcash.wait()?;
-    main.wait()?;
+    run_server(&config).await?;
+    client.stop().await?;
+    zcash.wait().await?;
+    main.wait().await?;
     Ok(())
+}
+
+async fn run_server(config: &Config) -> anyhow::Result<SocketAddr> {
+    let server = HttpServerBuilder::default()
+        .build(config.switchboard.socket_address()?)
+        .await?;
+    let addr = server.local_addr()?;
+    server.start(Switchboardd.into_rpc())?.await;
+    Ok(addr)
 }

@@ -3,12 +3,12 @@ use std::path::{Path, PathBuf};
 use switchboard_config::Config;
 
 pub struct Daemons {
-    pub main: std::process::Child,
-    pub zcash: std::process::Child,
+    pub main: tokio::process::Child,
+    pub zcash: tokio::process::Child,
 }
 
 pub async fn spawn_daemons(config: &Config) -> Result<Daemons> {
-    let main = std::process::Command::new(&config.main.bin)
+    let main = tokio::process::Command::new(&config.main.bin)
         .arg(format!(
             "-datadir={}",
             mainchain_datadir(&config.switchboard.datadir).display()
@@ -24,7 +24,7 @@ pub async fn spawn_daemons(config: &Config) -> Result<Daemons> {
             }
         ))
         .spawn()?;
-    let zcash = std::process::Command::new(&config.zcash.bin)
+    let zcash = tokio::process::Command::new(&config.zcash.bin)
         .arg(format!(
             "-datadir={}",
             zcash_datadir(&config.switchboard.datadir).display()

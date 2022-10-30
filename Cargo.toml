@@ -5,8 +5,9 @@ members = [
 "zcash-rpc",
 
 "switchboard-launcher",
-"switchboard-api",
 "switchboard-config",
+"switchboard-api",
+"switchboard-rpc",
 "switchboardd",
-"switchboard-cli",
+"switchboard-cli"
 ]

@@ -1,11 +1,10 @@
 [package]
-name = "switchboard-launcher"
+name = "switchboard-rpc"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-switchboard-config = { path = "../switchboard-config" }
-anyhow = "1.0.66"
-tokio = { version = "1.21.2", features = ["process"] }
+jsonrpsee = { version = "0.15.1", features = ["server", "client", "macros"] }
+serde = { version = "1.0.147", features = ["derive"] }

@@ -13,4 +13,5 @@ jsonrpsee = { version = "0.15.1", features = ["client", "macros"] }
 amount-btc = { path = "../amount-btc" }
 
 [dev-dependencies]
+base64 = "0.13.1"
 tokio = { version = "1.21.2", features = ["rt-multi-thread", "macros"] }

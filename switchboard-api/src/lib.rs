@@ -1,13 +1,15 @@
 use amount_btc::AmountBtc;
 use anyhow::Result;
 pub use bitcoin::Amount;
+use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::{HeaderMap, HttpClient, HttpClientBuilder};
 use main_rpc::MainClient;
+use serde_json::Value;
 use switchboard_config::Config;
 use zcash_rpc::ZcashClient;
 
 #[derive(Clone)]
-pub struct Client {
+pub struct SidechainClient {
     main: HttpClient,
     zcash: HttpClient,
 }
@@ -49,8 +51,8 @@ impl Sidechain {
     }
 }
 
-impl Client {
-    pub fn new(config: &Config) -> Result<Client> {
+impl SidechainClient {
+    pub fn new(config: &Config) -> Result<SidechainClient> {
         let mut headers = HeaderMap::new();
         headers.insert("authorization", config.switchboard.basic_auth()?);
         let main = HttpClientBuilder::default()
@@ -59,7 +61,43 @@ impl Client {
         let zcash = HttpClientBuilder::default()
             .set_headers(headers)
             .build(config.zcash.socket_address())?;
-        Ok(Client { main, zcash })
+        Ok(SidechainClient { main, zcash })
+    }
+
+    fn prepare_params(params: Option<Vec<String>>) -> Option<jsonrpsee::types::ParamsSer<'static>> {
+        params.map(|p| {
+            jsonrpsee::types::ParamsSer::Array(
+                p.into_iter()
+                    .map(|param| match param.parse() {
+                        Ok(param) => param,
+                        Err(_) => Value::String(param),
+                    })
+                    .collect(),
+            )
+        })
+    }
+
+    pub async fn main_request(
+        &self,
+        method: String,
+        params: Option<Vec<String>>,
+    ) -> Result<Value, jsonrpsee::core::Error> {
+        self.main.request(&method, Self::prepare_params(params)).await
+    }
+
+    pub async fn zcash_request(
+        &self,
+        method: String,
+        params: Option<Vec<String>>,
+    ) -> Result<Value, jsonrpsee::core::Error> {
+        self.zcash.request(&method, Self::prepare_params(params)).await
+    }
+
+    pub async fn stop(&self) -> Result<Vec<String>, jsonrpsee::core::Error> {
+        Ok(vec![
+            ZcashClient::stop(&self.zcash).await?,
+            MainClient::stop(&self.main).await?,
+        ])
     }
 
     pub async fn generate(

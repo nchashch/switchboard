@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 bitcoin = "0.29.1"
-jsonrpsee = { version = "0.15.1", features = ["server", "macros"] }
+jsonrpsee = { version = "0.15.1", features = ["client"] }
+switchboard-rpc = { path = "../switchboard-rpc" }
 switchboard-api = { path = "../switchboard-api" }
 switchboard-config = { path = "../switchboard-config" }
 clap = { version = "4.0.1", features = ["derive"] }

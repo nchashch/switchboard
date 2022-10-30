@@ -1,16 +1,16 @@
 use serde_derive::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ChainConfig {
     pub bin: PathBuf,
-    pub host: String,
     pub port: u16,
 }
 
 impl ChainConfig {
     pub fn socket_address(&self) -> String {
-        format!("http://{}:{}", self.host, self.port)
+        format!("http://127.0.0.1:{}", self.port)
     }
 }
 
@@ -21,6 +21,8 @@ pub struct SwitchboardConfig {
     pub rpcuser: String,
     pub rpcpassword: String,
     pub regtest: bool,
+
+    pub port: u16,
 }
 
 impl SwitchboardConfig {
@@ -28,6 +30,10 @@ impl SwitchboardConfig {
         let auth = format!("{}:{}", self.rpcuser, self.rpcpassword);
         let header_value = format!("Basic {}", base64::encode(auth)).parse()?;
         Ok(header_value)
+    }
+
+    pub fn socket_address(&self) -> Result<SocketAddr, std::net::AddrParseError> {
+        format!("127.0.0.1:{}", self.port).parse()
     }
 }
 
@@ -46,15 +52,15 @@ impl Default for Config {
                 rpcuser: "user".into(),
                 rpcpassword: "password".into(),
                 regtest: true,
+
+                port: 20443,
             },
             main: ChainConfig {
                 bin: "../mainchain/src/drivechaind".into(),
-                host: "localhost".into(),
                 port: 18443,
             },
             zcash: ChainConfig {
                 bin: "../zcash-sidechain/src/zcashd".into(),
-                host: "localhost".into(),
                 port: 19443,
             },
         }

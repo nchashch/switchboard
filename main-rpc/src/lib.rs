@@ -54,6 +54,8 @@ pub struct Block {
 
 #[rpc(client)]
 pub trait Main {
+    #[method(name = "stop")]
+    async fn stop(&self) -> Result<String, jsonrpsee::core::Error>;
     #[method(name = "getbalance")]
     async fn getbalance(
         &self,
@@ -127,9 +129,9 @@ pub trait Main {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jsonrpsee::http_client::{HeaderMap, HttpClientBuilder};
     use std::str::FromStr;
-    use super::*;
 
     #[tokio::test]
     async fn it_works() {
