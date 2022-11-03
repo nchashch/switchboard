@@ -21,12 +21,14 @@ pub struct Balances {
 }
 
 #[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Chain {
     Main,
     Zcash,
 }
 
 #[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Sidechain {
     Zcash,
 }

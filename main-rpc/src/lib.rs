@@ -145,7 +145,7 @@ mod tests {
             .set_headers(headers.clone())
             .build("http://localhost:18443")
             .unwrap();
-        dbg!(main.getbalance(None, None, None).await.unwrap());
+        dbg!(*main.getbalance(None, None, None).await.unwrap());
         dbg!(main.getnewaddress(None).await.unwrap());
         dbg!(main.generate(1, None).await.unwrap());
         dbg!(main

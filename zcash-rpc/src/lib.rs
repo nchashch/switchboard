@@ -115,7 +115,7 @@ mod tests {
             .set_headers(headers.clone())
             .build("http://localhost:8443")
             .unwrap();
-        dbg!(zcash.getbalance(None, None, None).await.unwrap());
+        dbg!(*zcash.getbalance(None, None, None).await.unwrap());
         dbg!(zcash.getnewaddress(None).await.unwrap());
         dbg!(zcash
             .getblock(
