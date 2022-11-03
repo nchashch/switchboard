@@ -40,9 +40,7 @@ enum Commands {
     /// Get balances for mainchain and all sidechains
     Getbalances,
     /// Get a new address
-    Getnewaddress {
-        chain: Chain,
-    },
+    Getnewaddress { chain: Chain },
     /// Create a deposit to a sidechain
     Deposit {
         /// Sidechain to deposit to
@@ -73,8 +71,20 @@ async fn main() -> Result<()> {
             }
         }
         Commands::Zcash { method, params } => {
-            let result = match client.zcash(method, prepare_params(params)).await {
-                Ok(result) => format!("{:#}", result),
+            let result = match client.zcash(method.clone(), prepare_params(params)).await {
+                Ok(result) => {
+                    if method == "help" {
+                        let help_string = format!("{}", result)
+                            .replace("\\n", "\n")
+                            .replace("\\\"", "\"");
+                        let mut chars = help_string.chars();
+                        chars.next();
+                        chars.next_back();
+                        chars.as_str().into()
+                    } else {
+                        format!("{:#}", result)
+                    }
+                }
                 Err(jsonrpsee::core::Error::Call(err)) => {
                     ErrorObject::from(err).message().to_string()
                 }
@@ -83,8 +93,20 @@ async fn main() -> Result<()> {
             print!("{}", result);
         }
         Commands::Main { method, params } => {
-            let result = match client.main(method, prepare_params(params)).await {
-                Ok(result) => format!("{:#}", result),
+            let result = match client.main(method.clone(), prepare_params(params)).await {
+                Ok(result) => {
+                    if method == "help" {
+                        let help_string = format!("{}", result)
+                            .replace("\\n", "\n")
+                            .replace("\\\"", "\"");
+                        let mut chars = help_string.chars();
+                        chars.next();
+                        chars.next_back();
+                        chars.as_str().into()
+                    } else {
+                        format!("{:#}", result)
+                    }
+                }
                 Err(jsonrpsee::core::Error::Call(err)) => {
                     ErrorObject::from(err).message().to_string()
                 }
