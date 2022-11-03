@@ -1,9 +1,9 @@
-use amount_btc::AmountBtc;
 use anyhow::Result;
 pub use bitcoin::Amount;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::{HeaderMap, HttpClient, HttpClientBuilder};
 use main_rpc::MainClient;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use switchboard_config::Config;
 use zcash_rpc::ZcashClient;
@@ -20,13 +20,13 @@ pub struct Balances {
     pub zcash: Amount,
 }
 
-#[derive(Copy, Clone, Debug, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
 pub enum Chain {
     Main,
     Zcash,
 }
 
-#[derive(Copy, Clone, Debug, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
 pub enum Sidechain {
     Zcash,
 }
@@ -64,33 +64,28 @@ impl SidechainClient {
         Ok(SidechainClient { main, zcash })
     }
 
-    fn prepare_params(params: Option<Vec<String>>) -> Option<jsonrpsee::types::ParamsSer<'static>> {
-        params.map(|p| {
-            jsonrpsee::types::ParamsSer::Array(
-                p.into_iter()
-                    .map(|param| match param.parse() {
-                        Ok(param) => param,
-                        Err(_) => Value::String(param),
-                    })
-                    .collect(),
-            )
-        })
+    fn prepare_params(params: Option<Vec<Value>>) -> Option<jsonrpsee::types::ParamsSer<'static>> {
+        params.map(jsonrpsee::types::ParamsSer::Array)
     }
 
     pub async fn main_request(
         &self,
         method: String,
-        params: Option<Vec<String>>,
+        params: Option<Vec<Value>>,
     ) -> Result<Value, jsonrpsee::core::Error> {
-        self.main.request(&method, Self::prepare_params(params)).await
+        self.main
+            .request(&method, Self::prepare_params(params))
+            .await
     }
 
     pub async fn zcash_request(
         &self,
         method: String,
-        params: Option<Vec<String>>,
+        params: Option<Vec<Value>>,
     ) -> Result<Value, jsonrpsee::core::Error> {
-        self.zcash.request(&method, Self::prepare_params(params)).await
+        self.zcash
+            .request(&method, Self::prepare_params(params))
+            .await
     }
 
     pub async fn stop(&self) -> Result<Vec<String>, jsonrpsee::core::Error> {
@@ -105,7 +100,7 @@ impl SidechainClient {
         number: usize,
         amount: Amount,
     ) -> Result<Vec<bitcoin::BlockHash>, jsonrpsee::core::Error> {
-        ZcashClient::generate(&self.zcash, number, AmountBtc(amount)).await
+        ZcashClient::generate(&self.zcash, number, amount.into()).await
     }
 
     pub async fn get_balances(&self) -> Result<Balances, jsonrpsee::core::Error> {
@@ -118,6 +113,7 @@ impl SidechainClient {
         Ok(Balances { main, zcash })
     }
 
+    // FIXME: Define an num with different kinds of addresses.
     pub async fn get_new_address(&self, chain: Chain) -> Result<String, jsonrpsee::core::Error> {
         Ok(match chain {
             Chain::Main => MainClient::getnewaddress(&self.main, None)
@@ -151,8 +147,8 @@ impl SidechainClient {
             &self.main,
             sidechain.number(),
             &deposit_address,
-            &AmountBtc(amount),
-            &AmountBtc(fee),
+            &amount.into(),
+            &fee.into(),
         )
         .await
     }

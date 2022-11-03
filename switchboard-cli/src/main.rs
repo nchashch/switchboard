@@ -2,8 +2,9 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use jsonrpsee::http_client::HttpClientBuilder;
 use jsonrpsee::types::ErrorObject;
+use serde_json::Value;
 use std::path::PathBuf;
-use switchboard_api::{Chain, Sidechain, SidechainClient};
+use switchboard_api::{Chain, Sidechain};
 use switchboard_config::Config;
 use switchboard_rpc::SwitchboardRpcClient;
 
@@ -22,9 +23,6 @@ fn btc_amount_parser(s: &str) -> Result<bitcoin::Amount, bitcoin::util::amount::
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    Hello {
-        name: String,
-    },
     /// Generate a mainchain block
     Generate {
         number: usize,
@@ -68,56 +66,61 @@ async fn main() -> Result<()> {
     let config: Config = confy::load_path(config_path)?;
     let address = format!("http://{}", config.switchboard.socket_address()?);
     let client = HttpClientBuilder::default().build(address)?;
-    let sidechain_client = SidechainClient::new(&config)?;
     match args.commands {
-        Commands::Hello { name } => {
-            let result = client.hello(name).await?;
-            println!("{}", result);
-        }
         Commands::Generate { number, amount } => {
-            for hash in sidechain_client.generate(number, amount).await? {
-                println!("{}", hash);
+            for hash in client.generate(number, amount.into()).await? {
+                print!("{}", hash);
             }
         }
         Commands::Zcash { method, params } => {
-            let result = match sidechain_client.zcash_request(method, params).await {
+            let result = match client.zcash(method, prepare_params(params)).await {
                 Ok(result) => format!("{:#}", result),
                 Err(jsonrpsee::core::Error::Call(err)) => {
                     ErrorObject::from(err).message().to_string()
                 }
                 Err(err) => format!("{}", err),
             };
-            println!("{}", result);
+            print!("{}", result);
         }
         Commands::Main { method, params } => {
-            let result = match sidechain_client.main_request(method, params).await {
+            let result = match client.main(method, prepare_params(params)).await {
                 Ok(result) => format!("{:#}", result),
                 Err(jsonrpsee::core::Error::Call(err)) => {
                     ErrorObject::from(err).message().to_string()
                 }
                 Err(err) => format!("{}", err),
             };
-            println!("{}", result);
+            print!("{}", result);
         }
         Commands::Getbalances => {
-            let balances = sidechain_client.get_balances().await?;
-            println!("main balance:  {:>24}", format!("{}", balances.main));
-            println!("zcash balance: {:>24}", format!("{}", balances.zcash));
+            let balances = client.getbalances().await?;
+            print!("{}", balances);
         }
         Commands::Getnewaddress { chain } => {
-            println!("{}", sidechain_client.get_new_address(chain).await?);
+            print!("{}", client.getnewaddress(chain).await?);
         }
         Commands::Deposit {
             sidechain,
             amount,
             fee,
         } => {
-            let txid = sidechain_client.deposit(sidechain, amount, fee).await?;
-            println!(
+            let txid = client.deposit(sidechain, amount.into(), fee.into()).await?;
+            print!(
                 "created deposit of {} to {} with fee {} and txid = {}",
                 amount, sidechain, fee, txid
             );
         }
     }
     Ok(())
+}
+
+fn prepare_params(params: Option<Vec<String>>) -> Option<Vec<Value>> {
+    params.map(|p| {
+        p.into_iter()
+            .map(|param| match param.parse() {
+                Ok(param) => param,
+                Err(_) => Value::String(param),
+            })
+            .collect()
+    })
 }

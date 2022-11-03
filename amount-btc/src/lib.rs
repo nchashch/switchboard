@@ -1,6 +1,33 @@
 use bitcoin::util::amount::serde::SerdeAmount;
-#[derive(Debug)]
+use std::ops::{Deref, DerefMut};
+
 pub struct AmountBtc(pub bitcoin::Amount);
+
+impl From<bitcoin::Amount> for AmountBtc {
+    fn from(other: bitcoin::Amount) -> AmountBtc {
+        AmountBtc(other)
+    }
+}
+
+impl From<AmountBtc> for bitcoin::Amount {
+    fn from(other: AmountBtc) -> bitcoin::Amount {
+        other.0
+    }
+}
+
+impl Deref for AmountBtc {
+    type Target = bitcoin::Amount;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for AmountBtc {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 impl<'de> serde::Deserialize<'de> for AmountBtc {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
