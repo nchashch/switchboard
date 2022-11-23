@@ -1,6 +1,7 @@
 use bitcoin::util::amount::serde::SerdeAmount;
 use std::ops::{Deref, DerefMut};
 
+#[derive(Clone, Copy)]
 pub struct AmountBtc(pub bitcoin::Amount);
 
 impl From<bitcoin::Amount> for AmountBtc {

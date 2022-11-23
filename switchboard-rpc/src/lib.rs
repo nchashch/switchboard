@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use switchboard_api::{Chain, Sidechain, SidechainClient};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Balances {
     main: AmountBtc,
     zcash: AmountBtc,
@@ -13,8 +13,16 @@ pub struct Balances {
 
 impl std::fmt::Display for Balances {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "main balance:  {:>24}", format!("{}", *self.main))?;
-        write!(f, "zcash balance: {:>24}", format!("{}", *self.zcash))
+        write!(f, "{}", switchboard_api::Balances::from(*self))
+    }
+}
+
+impl From<Balances> for switchboard_api::Balances {
+    fn from(other: Balances) -> switchboard_api::Balances {
+        switchboard_api::Balances {
+            main: other.main.into(),
+            zcash: other.zcash.into(),
+        }
     }
 }
 
@@ -73,6 +81,9 @@ pub trait SwitchboardRpc {
         method: String,
         params: Option<Vec<Value>>,
     ) -> Result<Value, jsonrpsee::core::Error>;
+
+    #[method(name = "activatesidechains")]
+    async fn activatesidechains(&self) -> Result<(), jsonrpsee::core::Error>;
 }
 
 #[async_trait]
@@ -82,7 +93,7 @@ impl SwitchboardRpcServer for Switchboardd {
         number: usize,
         amount: AmountBtc,
     ) -> Result<Vec<bitcoin::BlockHash>, jsonrpsee::core::Error> {
-        Ok(self.client.generate(number, *amount).await?)
+        self.client.generate(number, *amount).await
     }
 
     async fn getbalances(&self) -> Result<Balances, jsonrpsee::core::Error> {
@@ -90,7 +101,7 @@ impl SwitchboardRpcServer for Switchboardd {
     }
 
     async fn getnewaddress(&self, chain: Chain) -> Result<String, jsonrpsee::core::Error> {
-        Ok(self.client.get_new_address(chain).await?)
+        self.client.get_new_address(chain).await
     }
 
     async fn deposit(
@@ -99,7 +110,7 @@ impl SwitchboardRpcServer for Switchboardd {
         amount: AmountBtc,
         fee: AmountBtc,
     ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
-        Ok(self.client.deposit(sidechain, *amount, *fee).await?)
+        self.client.deposit(sidechain, *amount, *fee).await
     }
 
     async fn main(
@@ -107,7 +118,7 @@ impl SwitchboardRpcServer for Switchboardd {
         method: String,
         params: Option<Vec<Value>>,
     ) -> Result<Value, jsonrpsee::core::Error> {
-        Ok(self.client.main_request(method, params).await?)
+        self.client.main_request(method, params).await
     }
 
     async fn zcash(
@@ -115,6 +126,10 @@ impl SwitchboardRpcServer for Switchboardd {
         method: String,
         params: Option<Vec<Value>>,
     ) -> Result<Value, jsonrpsee::core::Error> {
-        Ok(self.client.zcash_request(method, params).await?)
+        self.client.zcash_request(method, params).await
+    }
+
+    async fn activatesidechains(&self) -> Result<(), jsonrpsee::core::Error> {
+        self.client.activate_sidechains().await
     }
 }

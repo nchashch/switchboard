@@ -29,10 +29,12 @@ enum Commands {
         #[arg(value_parser = btc_amount_parser)]
         amount: bitcoin::Amount,
     },
+    /// Call zcash RPC directly
     Zcash {
         method: String,
         params: Option<Vec<String>>,
     },
+    /// Call mainchain RPC directly
     Main {
         method: String,
         params: Option<Vec<String>>,

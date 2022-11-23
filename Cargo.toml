@@ -9,5 +9,5 @@ members = [
 "switchboard-api",
 "switchboard-rpc",
 "switchboardd",
-"switchboard-cli"
+"switchboard-cli",
 ]

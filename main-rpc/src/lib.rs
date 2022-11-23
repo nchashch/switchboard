@@ -125,6 +125,17 @@ pub trait Main {
         verbose: Option<bool>,
         blockhash: Option<bitcoin::BlockHash>,
     ) -> Result<serde_json::Value, jsonrpsee::core::Error>;
+
+    #[method(name = "createsidechainproposal")]
+    async fn createsidechainproposal(
+        &self,
+        nsidechain: usize,
+        title: String,
+        description: Option<String>,
+        version: Option<usize>,
+        hashid1: Option<String>,
+        hashid2: Option<String>,
+    ) -> Result<serde_json::Value, jsonrpsee::core::Error>;
 }
 
 #[cfg(test)]

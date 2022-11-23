@@ -20,6 +20,13 @@ pub struct Balances {
     pub zcash: Amount,
 }
 
+impl std::fmt::Display for Balances {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "main balance:  {:>24}", format!("{}", self.main))?;
+        write!(f, "zcash balance: {:>24}", format!("{}", self.zcash))
+    }
+}
+
 #[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Chain {
@@ -102,6 +109,8 @@ impl SidechainClient {
         number: usize,
         amount: Amount,
     ) -> Result<Vec<bitcoin::BlockHash>, jsonrpsee::core::Error> {
+        // FIXME: This would works for zcash and ethereum sidechains. But it
+        // would be good to implement a more general solution.
         ZcashClient::generate(&self.zcash, number, amount.into()).await
     }
 
@@ -115,7 +124,7 @@ impl SidechainClient {
         Ok(Balances { main, zcash })
     }
 
-    // FIXME: Define an num with different kinds of addresses.
+    // FIXME: Define an enum with different kinds of addresses.
     pub async fn get_new_address(&self, chain: Chain) -> Result<String, jsonrpsee::core::Error> {
         Ok(match chain {
             Chain::Main => MainClient::getnewaddress(&self.main, None)
@@ -153,5 +162,33 @@ impl SidechainClient {
             &fee.into(),
         )
         .await
+    }
+
+    pub async fn withdraw(
+        &self,
+        sidechain: Sidechain,
+        amount: Amount,
+        fee: Amount,
+    ) -> Result<String, jsonrpsee::core::Error> {
+        Ok("".into())
+    }
+
+    /// This is used for setting up a new testing environment.
+    pub async fn activate_sidechains(&self) -> Result<(), jsonrpsee::core::Error> {
+        let active_sidechains = [Sidechain::Zcash];
+        for sidechain in active_sidechains {
+            MainClient::createsidechainproposal(
+                &self.main,
+                sidechain.number(),
+                format!("{}", sidechain),
+                None,
+                None,
+                None,
+                None,
+            )
+            .await?;
+        }
+        MainClient::generate(&self.main, 200, None).await?;
+        Ok(())
     }
 }
