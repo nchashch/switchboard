@@ -58,8 +58,6 @@ pub async fn spawn_daemons(datadir: &Path, config: &Config) -> Result<Daemons> {
         std::thread::sleep(std::time::Duration::from_secs(2));
         let client = SidechainClient::new(config)?;
         client.stop().await?;
-        main.as_ref().unwrap();
-        zcash.as_ref().unwrap();
     }
     let main = main?;
     let zcash = zcash?;
