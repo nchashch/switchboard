@@ -10,4 +10,5 @@ members = [
 "switchboard-rpc",
 "switchboardd",
 "switchboard-cli",
+"switchboard-gui/src-tauri",
 ]
