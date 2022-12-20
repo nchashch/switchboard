@@ -1,10 +1,9 @@
 use serde_derive::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use std::path::PathBuf;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ChainConfig {
-    pub bin: PathBuf,
+    // pub bin: PathBuf,
     pub port: u16,
 }
 
@@ -16,7 +15,6 @@ impl ChainConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SwitchboardConfig {
-    pub datadir: PathBuf,
     // Is it ok to reuse the same rpcuser and rpcpassword for all sidechains?
     pub rpcuser: String,
     pub rpcpassword: String,
@@ -48,7 +46,6 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             switchboard: SwitchboardConfig {
-                datadir: "../data".into(),
                 rpcuser: "user".into(),
                 rpcpassword: "password".into(),
                 regtest: true,
@@ -56,11 +53,9 @@ impl Default for Config {
                 port: 20443,
             },
             main: ChainConfig {
-                bin: "../mainchain/src/drivechaind".into(),
                 port: 18443,
             },
             zcash: ChainConfig {
-                bin: "../zcash-sidechain/src/zcashd".into(),
                 port: 19443,
             },
         }

@@ -1,0 +1,17 @@
+[switchboard]
+datadir = '../data'
+rpcuser = 'user'
+rpcpassword = 'password'
+regtest = true
+host = '127.0.0.1'
+port = 20443
+
+[main]
+bin = '../mainchain/src/drivechaind'
+host = 'localhost'
+port = 18443
+
+[zcash]
+bin = '../zcash-sidechain/src/zcashd'
+host = 'localhost'
+port = 19443

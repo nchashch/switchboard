@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+switchboard-api = { path = "../switchboard-api" }
 switchboard-config = { path = "../switchboard-config" }
 anyhow = "1.0.66"
 tokio = { version = "1.21.2", features = ["process"] }

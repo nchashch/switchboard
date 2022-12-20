@@ -98,9 +98,11 @@ impl SidechainClient {
     }
 
     pub async fn stop(&self) -> Result<Vec<String>, jsonrpsee::core::Error> {
+        let zcash = ZcashClient::stop(&self.zcash).await;
+        let main = MainClient::stop(&self.main).await;
         Ok(vec![
-            ZcashClient::stop(&self.zcash).await?,
-            MainClient::stop(&self.main).await?,
+            zcash?,
+            main?,
         ])
     }
 

@@ -12,22 +12,21 @@ use switchboard_rpc::{SwitchboardRpcServer, Switchboardd};
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[arg(short, long)]
-    config_path: Option<PathBuf>,
+    datadir: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
-    let config_path = match args.config_path {
-        Some(config_path) => config_path,
-        None => "./config.toml".into(),
-    };
-    let config: Config = confy::load_path(config_path)?;
+    let home_dir = dirs::home_dir().unwrap();
+    let sb_dir = home_dir.join(".switchboard");
+    let datadir = args.datadir.unwrap_or(sb_dir);
+    let config: Config = confy::load_path(datadir.join("config.toml"))?;
     let client = SidechainClient::new(&config)?;
     let Daemons {
         mut main,
         mut zcash,
-    } = spawn_daemons(&config).await?;
+    } = spawn_daemons(&datadir, &config).await?;
     run_server(&config, &client).await?;
     client.stop().await?;
     zcash.wait().await?;

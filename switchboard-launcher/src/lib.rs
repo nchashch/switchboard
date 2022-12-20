@@ -1,5 +1,6 @@
 use anyhow::Result;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use switchboard_api::SidechainClient;
 use switchboard_config::Config;
 
 pub struct Daemons {
@@ -7,12 +8,11 @@ pub struct Daemons {
     pub zcash: tokio::process::Child,
 }
 
-pub async fn spawn_daemons(config: &Config) -> Result<Daemons> {
-    let main = tokio::process::Command::new(&config.main.bin)
-        .arg(format!(
-            "-datadir={}",
-            mainchain_datadir(&config.switchboard.datadir).display()
-        ))
+async fn spawn_main(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
+    let main_datadir = datadir.join("data/main");
+    std::fs::create_dir_all(&main_datadir)?;
+    let main = tokio::process::Command::new(datadir.join("bin/drivechaind"))
+        .arg(format!("-datadir={}", main_datadir.display()))
         .arg(format!("-rpcport={}", config.main.port))
         .arg(format!("-rpcuser={}", config.switchboard.rpcuser))
         .arg(format!("-rpcpassword={}", config.switchboard.rpcpassword))
@@ -24,11 +24,18 @@ pub async fn spawn_daemons(config: &Config) -> Result<Daemons> {
             }
         ))
         .spawn()?;
-    let zcash = tokio::process::Command::new(&config.zcash.bin)
-        .arg(format!(
-            "-datadir={}",
-            zcash_datadir(&config.switchboard.datadir).display()
-        ))
+    Ok(main)
+}
+
+async fn spawn_zcash(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
+    let zcash_datadir = datadir.join("data/zcash");
+    std::fs::create_dir_all(&zcash_datadir)?;
+    let zcash_conf_path = zcash_datadir.join("zcash.conf");
+    let zcash_conf = "nuparams=5ba81b19:1
+nuparams=76b809bb:1";
+    std::fs::write(zcash_conf_path, zcash_conf)?;
+    let zcash = tokio::process::Command::new(datadir.join("bin/zcashd"))
+        .arg(format!("-datadir={}", zcash_datadir.display()))
         .arg(format!("-rpcport={}", config.zcash.port))
         .arg(format!("-rpcuser={}", config.switchboard.rpcuser))
         .arg(format!("-rpcpassword={}", config.switchboard.rpcpassword))
@@ -40,13 +47,21 @@ pub async fn spawn_daemons(config: &Config) -> Result<Daemons> {
             }
         ))
         .spawn()?;
+    Ok(zcash)
+}
+
+pub async fn spawn_daemons(datadir: &Path, config: &Config) -> Result<Daemons> {
+    std::fs::create_dir_all(&datadir)?;
+    let main = spawn_main(datadir, config).await;
+    let zcash = spawn_zcash(datadir, config).await;
+    if [&main, &zcash].iter().any(|r| r.is_err()) {
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        let client = SidechainClient::new(config)?;
+        client.stop().await?;
+        main.as_ref().unwrap();
+        zcash.as_ref().unwrap();
+    }
+    let main = main?;
+    let zcash = zcash?;
     Ok(Daemons { main, zcash })
-}
-
-fn mainchain_datadir(datadir: &Path) -> PathBuf {
-    datadir.join(Path::new("main"))
-}
-
-fn zcash_datadir(datadir: &Path) -> PathBuf {
-    datadir.join(Path::new("zcash"))
 }
