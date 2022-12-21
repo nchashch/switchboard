@@ -106,6 +106,8 @@ pub trait Main {
         nsidechain: usize,
         hashwithdrawal: bitcoin::Txid,
     ) -> Result<(), jsonrpsee::core::Error>;
+    #[method(name = "getblockcount")]
+    async fn getblockcount(&self) -> Result<usize, jsonrpsee::core::Error>;
     #[method(name = "getblock")]
     async fn getblock(
         &self,

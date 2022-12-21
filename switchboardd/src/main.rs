@@ -19,8 +19,9 @@ struct Cli {
 async fn main() -> Result<()> {
     let args = Cli::parse();
     let home_dir = dirs::home_dir().unwrap();
-    let sb_dir = home_dir.join(".switchboard");
-    let datadir = args.datadir.unwrap_or(sb_dir);
+    let datadir = args
+        .datadir
+        .unwrap_or_else(|| home_dir.join(".switchboard"));
     let config: Config = confy::load_path(datadir.join("config.toml"))?;
     let client = SidechainClient::new(&config)?;
     let Daemons {

@@ -1,7 +1,7 @@
 use jsonrpsee::core::async_trait;
 use jsonrpsee::proc_macros::rpc;
 use serde_json::Value;
-use switchboard_api::{Chain, Sidechain, SidechainClient, Balances};
+use switchboard_api::{Balances, BlockCounts, Chain, Sidechain, SidechainClient};
 
 pub struct Switchboardd {
     client: SidechainClient,
@@ -24,6 +24,9 @@ pub trait SwitchboardRpc {
 
     #[method(name = "getbalances")]
     async fn getbalances(&self) -> Result<Balances, jsonrpsee::core::Error>;
+
+    #[method(name = "getblockcounts")]
+    async fn getblockcounts(&self) -> Result<BlockCounts, jsonrpsee::core::Error>;
 
     #[method(name = "getnewaddress")]
     async fn getnewaddress(&self, chain: Chain) -> Result<String, jsonrpsee::core::Error>;
@@ -65,7 +68,11 @@ impl SwitchboardRpcServer for Switchboardd {
     }
 
     async fn getbalances(&self) -> Result<Balances, jsonrpsee::core::Error> {
-        Ok(self.client.get_balances().await?.into())
+        Ok(self.client.get_balances().await?)
+    }
+
+    async fn getblockcounts(&self) -> Result<BlockCounts, jsonrpsee::core::Error> {
+        Ok(self.client.get_block_counts().await?)
     }
 
     async fn getnewaddress(&self, chain: Chain) -> Result<String, jsonrpsee::core::Error> {

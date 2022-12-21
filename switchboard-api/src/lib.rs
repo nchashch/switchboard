@@ -29,6 +29,19 @@ impl std::fmt::Display for Balances {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BlockCounts {
+    pub main: usize,
+    pub zcash: usize,
+}
+
+impl std::fmt::Display for BlockCounts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "main block count:  {:>10}", format!("{}", self.main))?;
+        write!(f, "zcash block count: {:>10}", format!("{}", self.zcash))
+    }
+}
+
 #[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Chain {
@@ -124,6 +137,12 @@ impl SidechainClient {
             .await?
             .to_sat();
         Ok(Balances { main, zcash })
+    }
+
+    pub async fn get_block_counts(&self) -> Result<BlockCounts, jsonrpsee::core::Error> {
+        let main = MainClient::getblockcount(&self.main).await?;
+        let zcash = ZcashClient::getblockcount(&self.zcash).await?;
+        Ok(BlockCounts { main, zcash })
     }
 
     // FIXME: Define an enum with different kinds of addresses.

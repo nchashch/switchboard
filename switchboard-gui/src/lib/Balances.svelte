@@ -4,6 +4,7 @@
  export let main: number = 0;
  export let zcash: number = 0;
 </script>
+<h2>Balances</h2>
 <div class="row">
     <Amount amount={main} />
 </div>

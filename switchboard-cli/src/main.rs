@@ -41,6 +41,8 @@ enum Commands {
     },
     /// Get balances for mainchain and all sidechains
     Getbalances,
+    /// Get block counts for mainchain and all sidechains
+    Getblockcounts,
     /// Get a new address
     Getnewaddress { chain: Chain },
     /// Create a deposit to a sidechain
@@ -120,6 +122,10 @@ async fn main() -> Result<()> {
             let balances = client.getbalances().await?;
             print!("{}", balances);
         }
+        Commands::Getblockcounts => {
+            let block_counts = client.getblockcounts().await?;
+            print!("{}", block_counts);
+        }
         Commands::Getnewaddress { chain } => {
             print!("{}", client.getnewaddress(chain).await?);
         }
@@ -128,7 +134,9 @@ async fn main() -> Result<()> {
             amount,
             fee,
         } => {
-            let txid = client.deposit(sidechain, amount.to_sat(), fee.to_sat()).await?;
+            let txid = client
+                .deposit(sidechain, amount.to_sat(), fee.to_sat())
+                .await?;
             print!(
                 "created deposit of {} to {} with fee {} and txid = {}",
                 amount, sidechain, fee, txid
