@@ -1,19 +1,33 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/tauri";
+ import Balances from "$lib/Balances.svelte";
+ import { onMount } from "svelte";
+ import { invoke } from "@tauri-apps/api/tauri";
 
-  let name = "";
-  let greetMsg = "";
+ let balances = {};
+ let hash = "";
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    greetMsg = await invoke("greet", { name });
+  async function get_balances() {
+    balances = await invoke("get_balances");
   }
+
+ async function generate(amount: number) {
+   hash = await invoke("generate", { amount });
+   await get_balances();
+ }
+
+ onMount(async () => {
+   await new Promise(r => setTimeout(r, 1000));
+   await get_balances();
+ });
 </script>
 
 <div>
   <div class="row">
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button on:click={greet}> Greet </button>
+    <button on:click={get_balances}>Update</button>
+    <button on:click={() => generate(10000)}>Generate</button>
   </div>
-  <p>{greetMsg}</p>
+  <Balances {...balances} />
+  <div class="row">
+    {hash}
+  </div>
 </div>

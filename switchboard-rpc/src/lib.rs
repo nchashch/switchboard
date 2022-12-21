@@ -1,39 +1,7 @@
-use amount_btc::AmountBtc;
 use jsonrpsee::core::async_trait;
 use jsonrpsee::proc_macros::rpc;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use switchboard_api::{Chain, Sidechain, SidechainClient};
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct Balances {
-    main: AmountBtc,
-    zcash: AmountBtc,
-}
-
-impl std::fmt::Display for Balances {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", switchboard_api::Balances::from(*self))
-    }
-}
-
-impl From<Balances> for switchboard_api::Balances {
-    fn from(other: Balances) -> switchboard_api::Balances {
-        switchboard_api::Balances {
-            main: other.main.into(),
-            zcash: other.zcash.into(),
-        }
-    }
-}
-
-impl From<switchboard_api::Balances> for Balances {
-    fn from(other: switchboard_api::Balances) -> Balances {
-        Balances {
-            main: other.main.into(),
-            zcash: other.zcash.into(),
-        }
-    }
-}
+use switchboard_api::{Chain, Sidechain, SidechainClient, Balances};
 
 pub struct Switchboardd {
     client: SidechainClient,
@@ -51,7 +19,7 @@ pub trait SwitchboardRpc {
     async fn generate(
         &self,
         number: usize,
-        amount: AmountBtc,
+        amount: u64,
     ) -> Result<Vec<bitcoin::BlockHash>, jsonrpsee::core::Error>;
 
     #[method(name = "getbalances")]
@@ -64,8 +32,8 @@ pub trait SwitchboardRpc {
     async fn deposit(
         &self,
         sidechain: Sidechain,
-        amount: AmountBtc,
-        fee: AmountBtc,
+        amount: u64,
+        fee: u64,
     ) -> Result<bitcoin::Txid, jsonrpsee::core::Error>;
 
     #[method(name = "main")]
@@ -91,9 +59,9 @@ impl SwitchboardRpcServer for Switchboardd {
     async fn generate(
         &self,
         number: usize,
-        amount: AmountBtc,
+        amount: u64,
     ) -> Result<Vec<bitcoin::BlockHash>, jsonrpsee::core::Error> {
-        self.client.generate(number, *amount).await
+        self.client.generate(number, amount).await
     }
 
     async fn getbalances(&self) -> Result<Balances, jsonrpsee::core::Error> {
@@ -107,10 +75,10 @@ impl SwitchboardRpcServer for Switchboardd {
     async fn deposit(
         &self,
         sidechain: Sidechain,
-        amount: AmountBtc,
-        fee: AmountBtc,
+        amount: u64,
+        fee: u64,
     ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
-        self.client.deposit(sidechain, *amount, *fee).await
+        self.client.deposit(sidechain, amount, fee).await
     }
 
     async fn main(

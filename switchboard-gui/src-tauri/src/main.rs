@@ -11,35 +11,40 @@ use switchboard_config::Config;
 use switchboard_launcher::*;
 use tauri::{RunEvent, WindowEvent};
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+async fn generate(
+    client: tauri::State<'_, SidechainClient>,
+    amount: u64,
+) -> Result<String, String> {
+    client
+        .generate(1, amount)
+        .await
+        .map(|hashes| hashes.first().unwrap().to_string())
+        .map_err(|err| format!("{:#?}", err))
 }
 
 #[tauri::command]
-async fn get_balances(client: tauri::State<'_, SidechainClient>) -> Result<String, String> {
-    println!("getting balances");
+async fn get_balances(client: tauri::State<'_, SidechainClient>) -> Result<Balances, String> {
     let balances = client
         .get_balances()
         .await
         .map_err(|err| format!("{:#?}", err))?;
-    Ok(format!("{}", balances))
+    Ok(balances)
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-
     let args = Cli::parse();
     let home_dir = dirs::home_dir().unwrap();
-    let sb_dir = home_dir.join(".switchboard");
+    // let sb_dir = home_dir.join(".switchboard");
+    let sb_dir = home_dir.join("dev/data/switchboard");
     let datadir = args.datadir.unwrap_or(sb_dir);
     let config: Config = confy::load_path(datadir.join("config.toml"))?;
     let client = SidechainClient::new(&config)?;
-    let Daemons { main, zcash } = spawn_daemons(&datadir, &config).await?;
+    spawn_daemons(&datadir, &config).await?;
     let app = tauri::Builder::default()
         .manage(client.clone())
-        .invoke_handler(tauri::generate_handler![greet, get_balances])
+        .invoke_handler(tauri::generate_handler![generate, get_balances])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
     app.run(move |_app_handle, event| match event {

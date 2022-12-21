@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 switchboard-api = { path = "../switchboard-api" }
-amount-btc = { path = "../amount-btc" }
 jsonrpsee = { version = "0.15.1", features = ["server", "client", "macros"] }
 serde = { version = "1.0.147", features = ["derive"] }
 bitcoin = "0.29.2"

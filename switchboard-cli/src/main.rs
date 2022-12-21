@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
     let client = HttpClientBuilder::default().build(address)?;
     match args.commands {
         Commands::Generate { number, amount } => {
-            for hash in client.generate(number, amount.into()).await? {
+            for hash in client.generate(number, amount.to_sat()).await? {
                 print!("{}", hash);
             }
         }
@@ -128,7 +128,7 @@ async fn main() -> Result<()> {
             amount,
             fee,
         } => {
-            let txid = client.deposit(sidechain, amount.into(), fee.into()).await?;
+            let txid = client.deposit(sidechain, amount.to_sat(), fee.to_sat()).await?;
             print!(
                 "created deposit of {} to {} with fee {} and txid = {}",
                 amount, sidechain, fee, txid

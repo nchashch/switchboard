@@ -1,5 +1,5 @@
 use anyhow::Result;
-pub use bitcoin::Amount;
+use bitcoin::Amount;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::{HeaderMap, HttpClient, HttpClientBuilder};
 use main_rpc::MainClient;
@@ -14,16 +14,18 @@ pub struct SidechainClient {
     zcash: HttpClient,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Balances {
-    pub main: Amount,
-    pub zcash: Amount,
+    pub main: u64,
+    pub zcash: u64,
 }
 
 impl std::fmt::Display for Balances {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "main balance:  {:>24}", format!("{}", self.main))?;
-        write!(f, "zcash balance: {:>24}", format!("{}", self.zcash))
+        let main = Amount::from_sat(self.main);
+        let zcash = Amount::from_sat(self.zcash);
+        writeln!(f, "main balance:  {:>24}", format!("{}", main))?;
+        write!(f, "zcash balance: {:>24}", format!("{}", zcash))
     }
 }
 
@@ -100,29 +102,27 @@ impl SidechainClient {
     pub async fn stop(&self) -> Result<Vec<String>, jsonrpsee::core::Error> {
         let zcash = ZcashClient::stop(&self.zcash).await;
         let main = MainClient::stop(&self.main).await;
-        Ok(vec![
-            zcash?,
-            main?,
-        ])
+        Ok(vec![zcash?, main?])
     }
 
     pub async fn generate(
         &self,
         number: usize,
-        amount: Amount,
+        amount: u64,
     ) -> Result<Vec<bitcoin::BlockHash>, jsonrpsee::core::Error> {
         // FIXME: This would works for zcash and ethereum sidechains. But it
         // would be good to implement a more general solution.
+        let amount = Amount::from_sat(amount);
         ZcashClient::generate(&self.zcash, number, amount.into()).await
     }
 
     pub async fn get_balances(&self) -> Result<Balances, jsonrpsee::core::Error> {
         let main = MainClient::getbalance(&self.main, None, None, None)
             .await?
-            .0;
+            .to_sat();
         let zcash = ZcashClient::getbalance(&self.zcash, None, None, None)
             .await?
-            .0;
+            .to_sat();
         Ok(Balances { main, zcash })
     }
 
@@ -152,10 +152,12 @@ impl SidechainClient {
     pub async fn deposit(
         &self,
         sidechain: Sidechain,
-        amount: Amount,
-        fee: Amount,
+        amount: u64,
+        fee: u64,
     ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
         let deposit_address = self.get_deposit_address(sidechain).await?;
+        let amount = Amount::from_sat(amount);
+        let fee = Amount::from_sat(fee);
         MainClient::createsidechaindeposit(
             &self.main,
             sidechain.number(),
@@ -169,8 +171,8 @@ impl SidechainClient {
     pub async fn withdraw(
         &self,
         sidechain: Sidechain,
-        amount: Amount,
-        fee: Amount,
+        amount: u64,
+        fee: u64,
     ) -> Result<String, jsonrpsee::core::Error> {
         Ok("".into())
     }
