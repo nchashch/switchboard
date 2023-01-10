@@ -4,9 +4,11 @@ use jsonrpsee::http_client::HttpClientBuilder;
 use jsonrpsee::types::ErrorObject;
 use serde_json::Value;
 use std::path::PathBuf;
-use switchboard_api::{Chain, Sidechain};
-use switchboard_config::Config;
-use switchboard_rpc::SwitchboardRpcClient;
+use switchboard::{
+    api::{Chain, Sidechain},
+    config::Config,
+    server::SwitchboardRpcClient,
+};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

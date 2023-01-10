@@ -6,9 +6,11 @@ use anyhow::Result;
 use clap::Parser;
 use futures::executor::block_on;
 use std::path::PathBuf;
-use switchboard_api::{Balances, BlockCounts, SidechainClient};
-use switchboard_config::Config;
-use switchboard_launcher::*;
+use switchboard::{
+    api::{Balances, BlockCounts, SidechainClient},
+    config::Config,
+    launcher::*,
+};
 use tauri::{RunEvent, WindowEvent};
 
 #[tauri::command]
@@ -55,7 +57,11 @@ async fn main() -> Result<()> {
     spawn_daemons(&datadir, &config).await?;
     let app = tauri::Builder::default()
         .manage(client.clone())
-        .invoke_handler(tauri::generate_handler![generate, get_balances, get_block_counts])
+        .invoke_handler(tauri::generate_handler![
+            generate,
+            get_balances,
+            get_block_counts
+        ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
     app.run(move |_app_handle, event| match event {

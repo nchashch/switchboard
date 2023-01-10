@@ -2,11 +2,12 @@ use anyhow::Result;
 use bitcoin::Amount;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::{HeaderMap, HttpClient, HttpClientBuilder};
-use main_rpc::MainClient;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use switchboard_config::Config;
-use zcash_rpc::ZcashClient;
+
+use crate::config::Config;
+use crate::main_client::MainClient;
+use crate::zcash_client::ZcashClient;
 
 #[derive(Clone)]
 pub struct SidechainClient {

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::path::Path;
-use switchboard_api::SidechainClient;
-use switchboard_config::Config;
+use crate::api::SidechainClient;
+use crate::config::Config;
 
 pub struct Daemons {
     pub main: tokio::process::Child,

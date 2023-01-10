@@ -3,10 +3,12 @@ use clap::Parser;
 use jsonrpsee::http_server::HttpServerBuilder;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use switchboard_api::SidechainClient;
-use switchboard_config::Config;
-use switchboard_launcher::*;
-use switchboard_rpc::{SwitchboardRpcServer, Switchboardd};
+use switchboard::{
+    api::SidechainClient,
+    config::Config,
+    launcher::*,
+    server::{SwitchboardRpcServer, Switchboardd},
+};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

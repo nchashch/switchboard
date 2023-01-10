@@ -1,7 +1,7 @@
+use crate::api::{Balances, BlockCounts, Chain, Sidechain, SidechainClient};
 use jsonrpsee::core::async_trait;
 use jsonrpsee::proc_macros::rpc;
 use serde_json::Value;
-use switchboard_api::{Balances, BlockCounts, Chain, Sidechain, SidechainClient};
 
 pub struct Switchboardd {
     client: SidechainClient,

@@ -1,13 +1,6 @@
 [workspace]
 members = [
-"amount-btc",
-"main-rpc",
-"zcash-rpc",
-
-"switchboard-launcher",
-"switchboard-config",
-"switchboard-api",
-"switchboard-rpc",
+"switchboard",
 "switchboardd",
 "switchboard-cli",
 "switchboard-gui/src-tauri",
