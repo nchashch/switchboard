@@ -14,7 +14,7 @@ use switchboard::{
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[arg(short, long)]
-    config_path: Option<PathBuf>,
+    datadir: Option<PathBuf>,
     #[command(subcommand)]
     commands: Commands,
 }
@@ -74,11 +74,11 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
-    let config_path = match args.config_path {
-        Some(config_path) => config_path,
-        None => "./config.toml".into(),
-    };
-    let config: Config = confy::load_path(config_path)?;
+    let home_dir = dirs::home_dir().unwrap();
+    let datadir = args
+        .datadir
+        .unwrap_or_else(|| home_dir.join(".switchboard"));
+    let config: Config = confy::load_path(datadir.join("config.toml"))?;
     let address = format!("http://{}", config.switchboard.socket_address()?);
     let client = HttpClientBuilder::default().build(address)?;
     match args.commands {
