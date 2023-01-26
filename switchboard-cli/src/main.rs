@@ -65,7 +65,18 @@ enum Commands {
         /// Amount of BTC to withdraw
         #[arg(value_parser = btc_amount_parser)]
         amount: bitcoin::Amount,
-        /// Withdrawal fee in BTC, determines withdrawal priority in the bundle
+        /// Withdrawal fee in BTC, determines withdrawal's priority in the bundle
+        #[arg(value_parser = btc_amount_parser)]
+        fee: bitcoin::Amount,
+    },
+    /// Refund funds pending withdrawal back to a sidechain
+    Refund {
+        /// Sidechain to refund to
+        sidechain: Sidechain,
+        /// Amount of BTC to refund
+        #[arg(value_parser = btc_amount_parser)]
+        amount: bitcoin::Amount,
+        /// Withdrawal fee in BTC, determines change withdrawal's priority in the bundle
         #[arg(value_parser = btc_amount_parser)]
         fee: bitcoin::Amount,
     },
@@ -165,6 +176,19 @@ async fn main() -> Result<()> {
                 .await?;
             print!(
                 "created withdrawal of {} from {} with fee {}",
+                amount, sidechain, fee
+            );
+        }
+        Commands::Refund {
+            sidechain,
+            amount,
+            fee,
+        } => {
+            client
+                .refund(sidechain, amount.to_sat(), fee.to_sat())
+                .await?;
+            print!(
+                "refunded {} to {} with change withdrawal fee {}",
                 amount, sidechain, fee
             );
         }

@@ -33,14 +33,25 @@ pub struct SidechainClient {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Balances(HashMap<Chain, u64>);
+pub struct Balances {
+    available: HashMap<Chain, u64>,
+    refundable: HashMap<Sidechain, u64>,
+}
 
 impl std::fmt::Display for Balances {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (chain, amount) in self.0.iter() {
+        writeln!(f, "Available balances:")?;
+        for (chain, amount) in self.available.iter() {
             let amount = Amount::from_sat(*amount);
-            writeln!(f, "{:<10} balance:  {:>24}", chain, format!("{}", amount))?;
+            writeln!(f, "{:<10}:  {:>24}", chain, format!("{}", amount))?;
         }
+        writeln!(f, "Refundable balances:")?;
+        for (sidechain, amount) in self.refundable.iter() {
+            let amount = Amount::from_sat(*amount);
+            writeln!(f, "{:<10}:  {:>24}", sidechain, format!("{}", amount))?;
+        }
+        // FIXME: Add "pending withdrawal balances".
+        //writeln!(f, "Pending withdrawal balances:");
         write!(f, "")
     }
 }
@@ -58,7 +69,7 @@ impl std::fmt::Display for BlockCounts {
     }
 }
 
-#[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, clap::ValueEnum, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Sidechain {
     Zcash,
@@ -145,8 +156,15 @@ impl SidechainClient {
         let zcash = ZcashClient::getbalance(&self.zcash, None, None, None)
             .await?
             .to_sat();
-        let balances = HashMap::from([(Chain::Main, main), (Chain::Zcash, zcash)]);
-        Ok(Balances(balances))
+        let zcash_refundable = ZcashClient::getrefund(&self.zcash, None, None, None)
+            .await?
+            .to_sat();
+        let available = HashMap::from([(Chain::Main, main), (Chain::Zcash, zcash)]);
+        let refundable = HashMap::from([(Sidechain::Zcash, zcash_refundable)]);
+        Ok(Balances {
+            available,
+            refundable,
+        })
     }
 
     pub async fn get_block_counts(&self) -> Result<BlockCounts, jsonrpsee::core::Error> {
@@ -202,15 +220,29 @@ impl SidechainClient {
         sidechain: Sidechain,
         amount: u64,
         fee: u64,
-    ) -> Result<String, jsonrpsee::core::Error> {
+    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
         let amount = Amount::from_sat(amount);
         let fee = Amount::from_sat(fee);
         match sidechain {
             Sidechain::Zcash => {
-                ZcashClient::withdraw(&self.zcash, amount.into(), fee.into(), None).await?
+                ZcashClient::withdraw(&self.zcash, amount.into(), fee.into(), None).await
             }
-        };
-        Ok("".into())
+        }
+    }
+
+    pub async fn refund(
+        &self,
+        sidechain: Sidechain,
+        amount: u64,
+        fee: u64,
+    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
+        let amount = Amount::from_sat(amount);
+        let fee = Amount::from_sat(fee);
+        match sidechain {
+            Sidechain::Zcash => {
+                ZcashClient::refund(&self.zcash, amount.into(), fee.into(), None, None).await
+            }
+        }
     }
 
     /// This is used for setting up a new testing environment.

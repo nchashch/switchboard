@@ -3,7 +3,6 @@ use crate::config::Config;
 use anyhow::Result;
 use bytes::Buf;
 use flate2::read::GzDecoder;
-use std::fs::File;
 use std::path::Path;
 use tar::Archive;
 

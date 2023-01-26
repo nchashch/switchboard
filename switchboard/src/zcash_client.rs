@@ -65,6 +65,13 @@ pub trait Zcash {
         minconf: Option<usize>,
         include_watchonly: Option<bool>,
     ) -> Result<AmountBtc, jsonrpsee::core::Error>;
+    #[method(name = "getrefund")]
+    async fn getrefund(
+        &self,
+        account: Option<String>,
+        minconf: Option<usize>,
+        include_watchonly: Option<bool>,
+    ) -> Result<AmountBtc, jsonrpsee::core::Error>;
     #[method(name = "getnewaddress")]
     async fn getnewaddress(
         &self,
@@ -82,6 +89,14 @@ pub trait Zcash {
         amount: AmountBtc,
         main_fee: AmountBtc,
         main_address: Option<bitcoin::Address>,
+    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error>;
+    #[method(name = "refund")]
+    async fn refund(
+        &self,
+        amount: AmountBtc,
+        main_fee: AmountBtc,
+        main_address: Option<bitcoin::Address>,
+        zcash_address: Option<String>,
     ) -> Result<bitcoin::Txid, jsonrpsee::core::Error>;
     #[method(name = "getblockcount")]
     async fn getblockcount(&self) -> Result<usize, jsonrpsee::core::Error>;
