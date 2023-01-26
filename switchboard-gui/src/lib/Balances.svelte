@@ -6,8 +6,12 @@
 </script>
 <h2>Balances</h2>
 <div class="row">
-    <Amount amount={main} />
+    <span>
+        Main: <Amount amount={main} />
+    </span>
 </div>
 <div class="row">
-    <Amount amount={zcash} />
+    <span>
+        Zcash: <Amount amount={zcash} />
+    </span>
 </div>

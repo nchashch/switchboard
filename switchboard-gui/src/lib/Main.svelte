@@ -7,12 +7,12 @@
  let balances = {};
  let block_counts = {};
 
-  async function get_balances() {
-    balances = await invoke("get_balances");
-  }
+ async function get_balances() {
+     balances = await invoke("get_balances");
+ }
 
  async function get_block_counts() {
-    block_counts = await invoke("get_block_counts");
+     block_counts = await invoke("get_block_counts");
  }
 
  async function update() {
