@@ -58,6 +58,17 @@ enum Commands {
         #[arg(value_parser = btc_amount_parser)]
         fee: bitcoin::Amount,
     },
+    /// Withdraw funds from a sidechain
+    Withdraw {
+        /// Sidechain to withdraw from
+        sidechain: Sidechain,
+        /// Amount of BTC to withdraw
+        #[arg(value_parser = btc_amount_parser)]
+        amount: bitcoin::Amount,
+        /// Withdrawal fee in BTC, determines withdrawal priority in the bundle
+        #[arg(value_parser = btc_amount_parser)]
+        fee: bitcoin::Amount,
+    },
 }
 
 #[tokio::main]
@@ -142,6 +153,19 @@ async fn main() -> Result<()> {
             print!(
                 "created deposit of {} to {} with fee {} and txid = {}",
                 amount, sidechain, fee, txid
+            );
+        }
+        Commands::Withdraw {
+            sidechain,
+            amount,
+            fee,
+        } => {
+            client
+                .withdraw(sidechain, amount.to_sat(), fee.to_sat())
+                .await?;
+            print!(
+                "created withdrawal of {} from {} with fee {}",
+                amount, sidechain, fee
             );
         }
     }

@@ -76,6 +76,13 @@ pub trait Zcash {
         nblocks: usize,
         amount: AmountBtc,
     ) -> Result<Vec<bitcoin::BlockHash>, jsonrpsee::core::Error>;
+    #[method(name = "withdraw")]
+    async fn withdraw(
+        &self,
+        amount: AmountBtc,
+        main_fee: AmountBtc,
+        main_address: Option<bitcoin::Address>,
+    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error>;
     #[method(name = "getblockcount")]
     async fn getblockcount(&self) -> Result<usize, jsonrpsee::core::Error>;
     #[method(name = "getblock")]

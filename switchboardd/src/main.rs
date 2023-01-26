@@ -15,6 +15,8 @@ use switchboard::{
 struct Cli {
     #[arg(short, long)]
     datadir: Option<PathBuf>,
+    #[arg(short, long)]
+    bin_download_url: Option<String>,
 }
 
 #[tokio::main]
@@ -25,6 +27,12 @@ async fn main() -> Result<()> {
         .datadir
         .unwrap_or_else(|| home_dir.join(".switchboard"));
     let config: Config = confy::load_path(datadir.join("config.toml"))?;
+    if !datadir.join("bin").exists() {
+        let url = args
+            .bin_download_url
+            .unwrap_or("http://localhost:8080/bin.tar.gz".into());
+        switchboard::launcher::download_binaries(&datadir, &url).await?;
+    }
     let client = SidechainClient::new(&config)?;
     let Daemons {
         mut main,

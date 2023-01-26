@@ -1,7 +1,11 @@
-use anyhow::Result;
-use std::path::Path;
 use crate::api::SidechainClient;
 use crate::config::Config;
+use anyhow::Result;
+use bytes::Buf;
+use flate2::read::GzDecoder;
+use std::fs::File;
+use std::path::Path;
+use tar::Archive;
 
 pub struct Daemons {
     pub main: tokio::process::Child,
@@ -63,3 +67,25 @@ pub async fn spawn_daemons(datadir: &Path, config: &Config) -> Result<Daemons> {
     let zcash = zcash?;
     Ok(Daemons { main, zcash })
 }
+
+pub async fn download_binaries(datadir: &Path, url: &str) -> Result<()> {
+    download(
+        url,
+        datadir,
+        "c0ec39fea69cafee61208970129c780ab300c67766881597d332db86f3be4aec",
+    )
+    .await?;
+    Ok(())
+}
+
+pub async fn download(url: &str, path: &Path, digest: &str) -> Result<()> {
+    let response = reqwest::get(url).await?;
+    let content = response.bytes().await?;
+    assert_eq!(sha256::digest(content.as_ref()), digest);
+    let tar = GzDecoder::new(content.reader());
+    let mut archive = Archive::new(tar);
+    archive.unpack(path)?;
+    Ok(())
+}
+
+// drivechain linux 5d6d1a6f338038cd620606ff898b337f7973c2a61cf364118770a1acf47c2b94

@@ -4,10 +4,27 @@ use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::{HeaderMap, HttpClient, HttpClientBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 
 use crate::config::Config;
 use crate::main_client::MainClient;
 use crate::zcash_client::ZcashClient;
+
+#[derive(Copy, Clone, Debug, clap::ValueEnum, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Chain {
+    Main,
+    Zcash,
+}
+
+impl std::fmt::Display for Chain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Chain::Main => write!(f, "main"),
+            Chain::Zcash => write!(f, "zcash"),
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct SidechainClient {
@@ -16,17 +33,15 @@ pub struct SidechainClient {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Balances {
-    pub main: u64,
-    pub zcash: u64,
-}
+pub struct Balances(HashMap<Chain, u64>);
 
 impl std::fmt::Display for Balances {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let main = Amount::from_sat(self.main);
-        let zcash = Amount::from_sat(self.zcash);
-        writeln!(f, "main balance:  {:>24}", format!("{}", main))?;
-        write!(f, "zcash balance: {:>24}", format!("{}", zcash))
+        for (chain, amount) in self.0.iter() {
+            let amount = Amount::from_sat(*amount);
+            writeln!(f, "{:<10} balance:  {:>24}", chain, format!("{}", amount))?;
+        }
+        write!(f, "")
     }
 }
 
@@ -41,13 +56,6 @@ impl std::fmt::Display for BlockCounts {
         writeln!(f, "main block count:  {:>10}", format!("{}", self.main))?;
         write!(f, "zcash block count: {:>10}", format!("{}", self.zcash))
     }
-}
-
-#[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Chain {
-    Main,
-    Zcash,
 }
 
 #[derive(Copy, Clone, Debug, clap::ValueEnum, Serialize, Deserialize)]
@@ -137,7 +145,8 @@ impl SidechainClient {
         let zcash = ZcashClient::getbalance(&self.zcash, None, None, None)
             .await?
             .to_sat();
-        Ok(Balances { main, zcash })
+        let balances = HashMap::from([(Chain::Main, main), (Chain::Zcash, zcash)]);
+        Ok(Balances(balances))
     }
 
     pub async fn get_block_counts(&self) -> Result<BlockCounts, jsonrpsee::core::Error> {
@@ -194,6 +203,13 @@ impl SidechainClient {
         amount: u64,
         fee: u64,
     ) -> Result<String, jsonrpsee::core::Error> {
+        let amount = Amount::from_sat(amount);
+        let fee = Amount::from_sat(fee);
+        match sidechain {
+            Sidechain::Zcash => {
+                ZcashClient::withdraw(&self.zcash, amount.into(), fee.into(), None).await?
+            }
+        };
         Ok("".into())
     }
 

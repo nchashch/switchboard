@@ -39,6 +39,14 @@ pub trait SwitchboardRpc {
         fee: u64,
     ) -> Result<bitcoin::Txid, jsonrpsee::core::Error>;
 
+    #[method(name = "withdraw")]
+    async fn withdraw(
+        &self,
+        sidechain: Sidechain,
+        amount: u64,
+        fee: u64,
+    ) -> Result<String, jsonrpsee::core::Error>;
+
     #[method(name = "main")]
     async fn main(
         &self,
@@ -86,6 +94,15 @@ impl SwitchboardRpcServer for Switchboardd {
         fee: u64,
     ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
         self.client.deposit(sidechain, amount, fee).await
+    }
+
+    async fn withdraw(
+        &self,
+        sidechain: Sidechain,
+        amount: u64,
+        fee: u64,
+    ) -> Result<String, jsonrpsee::core::Error> {
+        self.client.withdraw(sidechain, amount, fee).await
     }
 
     async fn main(
