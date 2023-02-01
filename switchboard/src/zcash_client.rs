@@ -52,8 +52,6 @@ pub struct Block {
     nextblockhash: Option<bitcoin::BlockHash>,
 }
 
-trait ZcashClientT {}
-
 #[rpc(client)]
 pub trait Zcash {
     #[method(name = "stop")]
@@ -119,58 +117,4 @@ pub trait Zcash {
         verbose: Option<bool>,
         blockhash: Option<bitcoin::BlockHash>,
     ) -> Result<serde_json::Value, jsonrpsee::core::Error>;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use jsonrpsee::http_client::{HeaderMap, HttpClientBuilder};
-    use std::str::FromStr;
-
-    #[tokio::test]
-    async fn it_works() {
-        let auth = format!("{}:{}", "user", "password");
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            "authorization",
-            format!("Basic {}", base64::encode(auth)).parse().unwrap(),
-        );
-        let zcash = HttpClientBuilder::default()
-            .set_headers(headers.clone())
-            .build("http://localhost:8443")
-            .unwrap();
-        dbg!(*zcash.getbalance(None, None, None).await.unwrap());
-        dbg!(zcash.getnewaddress(None).await.unwrap());
-        dbg!(zcash
-            .getblock(
-                bitcoin::BlockHash::from_str(
-                    "52b84bdffcdcc21252116f9e24fdd703a8b157cfa87e4b4ba0e2b15648a7e1c6"
-                )
-                .unwrap(),
-                None
-            )
-            .await
-            .unwrap());
-        dbg!(zcash
-            .gettransaction(
-                bitcoin::Txid::from_str(
-                    "9a71b5c02401536672b2947d7ce3200ba59cbf79427c059f549b19ae0c7632c1"
-                )
-                .unwrap(),
-                None,
-            )
-            .await
-            .unwrap());
-        dbg!(zcash
-            .getrawtransaction(
-                bitcoin::Txid::from_str(
-                    "9a71b5c02401536672b2947d7ce3200ba59cbf79427c059f549b19ae0c7632c1"
-                )
-                .unwrap(),
-                Some(true),
-                None,
-            )
-            .await
-            .unwrap());
-    }
 }

@@ -41,12 +41,15 @@ enum Commands {
         method: String,
         params: Option<Vec<String>>,
     },
+    GethConsole,
     /// Get balances for mainchain and all sidechains
     Getbalances,
     /// Get block counts for mainchain and all sidechains
     Getblockcounts,
     /// Get a new address
-    Getnewaddress { chain: Chain },
+    Getnewaddress {
+        chain: Chain,
+    },
     /// Create a deposit to a sidechain
     Deposit {
         /// Sidechain to deposit to
@@ -141,6 +144,15 @@ async fn main() -> Result<()> {
                 Err(err) => format!("{}", err),
             };
             print!("{}", result);
+        }
+        Commands::GethConsole => {
+            let ipc_file = datadir.join("data/ethereum/geth.ipc");
+            let ethereum = tokio::process::Command::new(datadir.join("bin/geth"))
+                .arg("attach")
+                .arg(format!("{}", ipc_file.display()))
+                .spawn()?
+                .wait()
+                .await?;
         }
         Commands::Getbalances => {
             let balances = client.getbalances().await?;

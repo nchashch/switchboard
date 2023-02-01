@@ -15,6 +15,7 @@ use crate::zcash_client::ZcashClient;
 pub enum Chain {
     Main,
     Zcash,
+    Ethereum,
 }
 
 impl std::fmt::Display for Chain {
@@ -22,6 +23,7 @@ impl std::fmt::Display for Chain {
         match self {
             Chain::Main => write!(f, "main"),
             Chain::Zcash => write!(f, "zcash"),
+            Chain::Ethereum => write!(f, "ethereum"),
         }
     }
 }
@@ -30,6 +32,7 @@ impl std::fmt::Display for Chain {
 pub struct SidechainClient {
     main: HttpClient,
     zcash: HttpClient,
+    ethereum: HttpClient,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -73,11 +76,12 @@ impl std::fmt::Display for BlockCounts {
 #[serde(rename_all = "snake_case")]
 pub enum Sidechain {
     Zcash,
+    Ethereum,
 }
 
 impl std::fmt::Display for Sidechain {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "zcash")
+        self.chain().fmt(f)
     }
 }
 
@@ -85,12 +89,14 @@ impl Sidechain {
     fn chain(&self) -> Chain {
         match self {
             Sidechain::Zcash => Chain::Zcash,
+            Sidechain::Ethereum => Chain::Ethereum,
         }
     }
 
     fn number(&self) -> usize {
         match self {
             Sidechain::Zcash => 0,
+            Sidechain::Ethereum => 1,
         }
     }
 }
@@ -105,7 +111,12 @@ impl SidechainClient {
         let zcash = HttpClientBuilder::default()
             .set_headers(headers)
             .build(config.zcash.socket_address())?;
-        Ok(SidechainClient { main, zcash })
+        let ethereum = HttpClientBuilder::default().build(config.ethereum.socket_address())?;
+        Ok(SidechainClient {
+            main,
+            zcash,
+            ethereum,
+        })
     }
 
     fn prepare_params(params: Option<Vec<Value>>) -> Option<jsonrpsee::types::ParamsSer<'static>> {
@@ -135,6 +146,7 @@ impl SidechainClient {
     pub async fn stop(&self) -> Result<Vec<String>, jsonrpsee::core::Error> {
         let zcash = ZcashClient::stop(&self.zcash).await;
         let main = MainClient::stop(&self.main).await;
+
         Ok(vec![zcash?, main?])
     }
 
@@ -182,6 +194,7 @@ impl SidechainClient {
             Chain::Zcash => ZcashClient::getnewaddress(&self.zcash, None)
                 .await?
                 .to_string(),
+            Chain::Ethereum => todo!(),
         })
     }
 
@@ -227,6 +240,7 @@ impl SidechainClient {
             Sidechain::Zcash => {
                 ZcashClient::withdraw(&self.zcash, amount.into(), fee.into(), None).await
             }
+            Sidechain::Ethereum => todo!(),
         }
     }
 
@@ -242,13 +256,15 @@ impl SidechainClient {
             Sidechain::Zcash => {
                 ZcashClient::refund(&self.zcash, amount.into(), fee.into(), None, None).await
             }
+            Sidechain::Ethereum => todo!(),
         }
     }
 
     /// This is used for setting up a new testing environment.
     pub async fn activate_sidechains(&self) -> Result<(), jsonrpsee::core::Error> {
-        let active_sidechains = [Sidechain::Zcash];
+        let active_sidechains = [Sidechain::Zcash, Sidechain::Ethereum];
         for sidechain in active_sidechains {
+            dbg!(sidechain, sidechain.number());
             MainClient::createsidechainproposal(
                 &self.main,
                 sidechain.number(),

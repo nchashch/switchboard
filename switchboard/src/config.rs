@@ -40,6 +40,7 @@ pub struct Config {
     pub switchboard: SwitchboardConfig,
     pub main: ChainConfig,
     pub zcash: ChainConfig,
+    pub ethereum: ChainConfig,
 }
 
 impl Default for Config {
@@ -49,14 +50,16 @@ impl Default for Config {
                 rpcuser: "user".into(),
                 rpcpassword: "password".into(),
                 regtest: true,
-
                 port: 20443,
             },
             main: ChainConfig {
                 port: 18443,
             },
             zcash: ChainConfig {
-                port: 19443,
+                port: 19000,
+            },
+            ethereum: ChainConfig {
+                port: 19001,
             },
         }
     }

@@ -27,21 +27,32 @@ async fn main() -> Result<()> {
         .datadir
         .unwrap_or_else(|| home_dir.join(".switchboard"));
     let config: Config = confy::load_path(datadir.join("config.toml"))?;
+    let mut first_launch = false;
     if !datadir.join("bin").exists() {
         let url = args
             .bin_download_url
             .unwrap_or("http://localhost:8080/bin.tar.gz".into());
-        switchboard::launcher::download_binaries(&datadir, &url).await?;
+        download_binaries(&datadir, &url).await?;
+        first_launch = true;
+        if config.switchboard.regtest {
+            ethereum_regtest_setup(&datadir).await?;
+        }
     }
     let client = SidechainClient::new(&config)?;
     let Daemons {
         mut main,
         mut zcash,
+        mut ethereum,
     } = spawn_daemons(&datadir, &config).await?;
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    if config.switchboard.regtest && first_launch {
+        client.activate_sidechains().await?;
+    }
     run_server(&config, &client).await?;
     client.stop().await?;
     zcash.wait().await?;
     main.wait().await?;
+    ethereum.wait().await?;
     Ok(())
 }
 
