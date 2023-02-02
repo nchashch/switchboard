@@ -293,7 +293,6 @@ impl SidechainClient {
     pub async fn activate_sidechains(&self) -> Result<(), jsonrpsee::core::Error> {
         let active_sidechains = [Sidechain::Zcash, Sidechain::Ethereum];
         for sidechain in active_sidechains {
-            dbg!(sidechain, sidechain.number());
             MainClient::createsidechainproposal(
                 &self.main,
                 sidechain.number(),
