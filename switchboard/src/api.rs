@@ -7,6 +7,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 use crate::config::Config;
+use crate::ethereum_client::{EthereumClient, SATOSHI};
 use crate::main_client::MainClient;
 use crate::zcash_client::ZcashClient;
 
@@ -33,6 +34,7 @@ pub struct SidechainClient {
     main: HttpClient,
     zcash: HttpClient,
     ethereum: HttpClient,
+    web3: web3::Web3<web3::transports::Http>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -63,12 +65,18 @@ impl std::fmt::Display for Balances {
 pub struct BlockCounts {
     pub main: usize,
     pub zcash: usize,
+    pub ethereum: usize,
 }
 
 impl std::fmt::Display for BlockCounts {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "main block count:  {:>10}", format!("{}", self.main))?;
-        write!(f, "zcash block count: {:>10}", format!("{}", self.zcash))
+        writeln!(f, "main block count:     {:>10}", format!("{}", self.main))?;
+        writeln!(f, "zcash block count:    {:>10}", format!("{}", self.zcash));
+        write!(
+            f,
+            "ethereum block count: {:>10}",
+            format!("{}", self.ethereum)
+        )
     }
 }
 
@@ -112,10 +120,14 @@ impl SidechainClient {
             .set_headers(headers)
             .build(config.zcash.socket_address())?;
         let ethereum = HttpClientBuilder::default().build(config.ethereum.socket_address())?;
+        let transport =
+            web3::transports::Http::new(&format!("http://localhost:{}", config.ethereum.port))?;
+        let web3 = web3::Web3::new(transport);
         Ok(SidechainClient {
             main,
             zcash,
             ethereum,
+            web3,
         })
     }
 
@@ -161,7 +173,7 @@ impl SidechainClient {
         ZcashClient::generate(&self.zcash, number, amount.into()).await
     }
 
-    pub async fn get_balances(&self) -> Result<Balances, jsonrpsee::core::Error> {
+    pub async fn get_balances(&self) -> Result<Balances> {
         let main = MainClient::getbalance(&self.main, None, None, None)
             .await?
             .to_sat();
@@ -171,7 +183,19 @@ impl SidechainClient {
         let zcash_refundable = ZcashClient::getrefund(&self.zcash, None, None, None)
             .await?
             .to_sat();
-        let available = HashMap::from([(Chain::Main, main), (Chain::Zcash, zcash)]);
+        let ethereum = {
+            let accounts = self.web3.eth().accounts().await?;
+            let mut balance = web3::types::U256::zero();
+            for account in accounts.iter() {
+                balance += self.web3.eth().balance(*account, None).await?;
+            }
+            (balance / SATOSHI).as_u64()
+        };
+        let available = HashMap::from([
+            (Chain::Main, main),
+            (Chain::Zcash, zcash),
+            (Chain::Ethereum, ethereum),
+        ]);
         let refundable = HashMap::from([(Sidechain::Zcash, zcash_refundable)]);
         Ok(Balances {
             available,
@@ -179,10 +203,15 @@ impl SidechainClient {
         })
     }
 
-    pub async fn get_block_counts(&self) -> Result<BlockCounts, jsonrpsee::core::Error> {
+    pub async fn get_block_counts(&self) -> Result<BlockCounts> {
         let main = MainClient::getblockcount(&self.main).await?;
         let zcash = ZcashClient::getblockcount(&self.zcash).await?;
-        Ok(BlockCounts { main, zcash })
+        let ethereum = self.web3.eth().block_number().await?.as_usize();
+        Ok(BlockCounts {
+            main,
+            zcash,
+            ethereum,
+        })
     }
 
     // FIXME: Define an enum with different kinds of addresses.

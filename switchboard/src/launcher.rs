@@ -120,7 +120,7 @@ pub async fn download(url: &str, path: &Path, digest: &str) -> Result<()> {
 }
 
 pub async fn ethereum_regtest_setup(datadir: &Path) -> Result<()> {
-    const genesis_json: &str = r#"
+    const GENESIS_JSON: &str = r#"
 {
 "config": {
     "chainId": 1337,
@@ -146,7 +146,7 @@ pub async fn ethereum_regtest_setup(datadir: &Path) -> Result<()> {
     let ethereum_datadir = datadir.join("data/ethereum");
     std::fs::create_dir_all(&ethereum_datadir)?;
     let genesis_json_path = ethereum_datadir.join("genesis.json");
-    std::fs::write(&genesis_json_path, genesis_json);
+    std::fs::write(&genesis_json_path, GENESIS_JSON);
     let ethereum = tokio::process::Command::new(datadir.join("bin/geth"))
         .arg(format!("--datadir={}", ethereum_datadir.display()))
         .arg("init")
