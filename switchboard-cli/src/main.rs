@@ -109,7 +109,7 @@ async fn main() -> Result<()> {
                 println!("{}", hash);
             }
             if let Some(hash) = hashes.last() {
-                print!("{}", hash);
+                println!("{}", hash);
             }
         }
         Commands::Zcash { method, params } => {
@@ -132,7 +132,7 @@ async fn main() -> Result<()> {
                 }
                 Err(err) => format!("{}", err),
             };
-            print!("{}", result);
+            println!("{}", result);
         }
         Commands::Main { method, params } => {
             let result = match client.main(method.clone(), prepare_params(params)).await {
@@ -154,7 +154,7 @@ async fn main() -> Result<()> {
                 }
                 Err(err) => format!("{}", err),
             };
-            print!("{}", result);
+            println!("{}", result);
         }
         Commands::GethConsole => {
             let ipc_file = datadir.join("data/ethereum/geth.ipc");
@@ -167,14 +167,14 @@ async fn main() -> Result<()> {
         }
         Commands::Getbalances => {
             let balances = client.getbalances().await?;
-            print!("{}", balances);
+            println!("{}", balances);
         }
         Commands::Getblockcounts => {
             let block_counts = client.getblockcounts().await?;
-            print!("{}", block_counts);
+            println!("{}", block_counts);
         }
         Commands::Getnewaddress { chain } => {
-            print!("{}", client.getnewaddress(chain).await?);
+            println!("{}", client.getnewaddress(chain).await?);
         }
         Commands::Deposit {
             sidechain,
@@ -185,7 +185,7 @@ async fn main() -> Result<()> {
             let txid = client
                 .deposit(sidechain, amount.to_sat(), fee.to_sat())
                 .await?;
-            print!(
+            println!(
                 "created deposit of {} to {} with fee {} and txid = {}",
                 amount, sidechain, fee, txid
             );
@@ -199,7 +199,7 @@ async fn main() -> Result<()> {
             client
                 .withdraw(sidechain, amount.to_sat(), fee.to_sat())
                 .await?;
-            print!(
+            println!(
                 "created withdrawal of {} from {} with fee {}",
                 amount, sidechain, fee
             );
@@ -213,7 +213,7 @@ async fn main() -> Result<()> {
             client
                 .refund(sidechain, amount.to_sat(), fee.to_sat())
                 .await?;
-            print!(
+            println!(
                 "refunded {} to {} with change withdrawal fee {}",
                 amount, sidechain, fee
             );
