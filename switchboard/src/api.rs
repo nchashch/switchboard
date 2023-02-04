@@ -1,10 +1,12 @@
 use anyhow::Result;
 use bitcoin::Amount;
+use hex::ToHex;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::{HeaderMap, HttpClient, HttpClientBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use web3::types::{H256, U256};
 
 use crate::config::Config;
 use crate::ethereum_client::{EthereumClient, SATOSHI};
@@ -39,25 +41,45 @@ pub struct SidechainClient {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Balances {
-    available: HashMap<Chain, u64>,
-    refundable: HashMap<Sidechain, u64>,
+    main: u64,
+    zcash: u64,
+    ethereum: u64,
+
+    zcash_refundable: u64,
+    ethereum_refundable: u64,
 }
 
 impl std::fmt::Display for Balances {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Available balances:")?;
-        for (chain, amount) in self.available.iter() {
-            let amount = Amount::from_sat(*amount);
-            writeln!(f, "{:<10}:  {:>24}", chain, format!("{}", amount))?;
-        }
+        writeln!(
+            f,
+            "main:     {:>24}",
+            format!("{}", Amount::from_sat(self.main))
+        );
+        writeln!(
+            f,
+            "zcash:    {:>24}",
+            format!("{}", Amount::from_sat(self.zcash))
+        );
+        writeln!(
+            f,
+            "ethereum: {:>24}",
+            format!("{}", Amount::from_sat(self.ethereum))
+        );
         writeln!(f, "Refundable balances:")?;
-        for (sidechain, amount) in self.refundable.iter() {
-            let amount = Amount::from_sat(*amount);
-            writeln!(f, "{:<10}:  {:>24}", sidechain, format!("{}", amount))?;
-        }
+        writeln!(
+            f,
+            "zcash:    {:>24}",
+            format!("{}", Amount::from_sat(self.zcash_refundable))
+        );
+        write!(
+            f,
+            "ethereum: {:>24}",
+            format!("{}", Amount::from_sat(self.ethereum_refundable))
+        )
         // FIXME: Add "pending withdrawal balances".
         //writeln!(f, "Pending withdrawal balances:");
-        write!(f, "")
     }
 }
 
@@ -180,26 +202,32 @@ impl SidechainClient {
         let zcash = ZcashClient::getbalance(&self.zcash, None, None, None)
             .await?
             .to_sat();
-        let zcash_refundable = ZcashClient::getrefund(&self.zcash, None, None, None)
-            .await?
-            .to_sat();
         let ethereum = {
             let accounts = self.web3.eth().accounts().await?;
-            let mut balance = web3::types::U256::zero();
+            let mut balance = U256::zero();
             for account in accounts.iter() {
                 balance += self.web3.eth().balance(*account, None).await?;
             }
             (balance / SATOSHI).as_u64()
         };
-        let available = HashMap::from([
-            (Chain::Main, main),
-            (Chain::Zcash, zcash),
-            (Chain::Ethereum, ethereum),
-        ]);
-        let refundable = HashMap::from([(Sidechain::Zcash, zcash_refundable)]);
+        let zcash_refundable = ZcashClient::getrefund(&self.zcash, None, None, None)
+            .await?
+            .to_sat();
+        let ethereum_refundable = {
+            let unspent_withdrawals =
+                EthereumClient::get_unspent_withdrawals(&self.ethereum).await?;
+            unspent_withdrawals
+                .values()
+                .map(|uw| (uw.amount / SATOSHI).as_u64())
+                .sum()
+        };
         Ok(Balances {
-            available,
-            refundable,
+            main,
+            zcash,
+            ethereum,
+
+            zcash_refundable,
+            ethereum_refundable,
         })
     }
 
@@ -214,8 +242,18 @@ impl SidechainClient {
         })
     }
 
+    async fn get_ethereum_account(&self) -> Result<web3::types::Address> {
+        self.web3
+            .eth()
+            .accounts()
+            .await?
+            .first()
+            .ok_or(anyhow::Error::msg("No available Ethereum addresses"))
+            .copied()
+    }
+
     // FIXME: Define an enum with different kinds of addresses.
-    pub async fn get_new_address(&self, chain: Chain) -> Result<String, jsonrpsee::core::Error> {
+    pub async fn get_new_address(&self, chain: Chain) -> Result<String> {
         Ok(match chain {
             Chain::Main => MainClient::getnewaddress(&self.main, None)
                 .await?
@@ -223,7 +261,10 @@ impl SidechainClient {
             Chain::Zcash => ZcashClient::getnewaddress(&self.zcash, None)
                 .await?
                 .to_string(),
-            Chain::Ethereum => todo!(),
+            Chain::Ethereum => format!(
+                "0x{}",
+                self.get_ethereum_account().await?.encode_hex::<String>()
+            ),
         })
     }
 
@@ -257,36 +298,70 @@ impl SidechainClient {
         .await
     }
 
-    pub async fn withdraw(
-        &self,
-        sidechain: Sidechain,
-        amount: u64,
-        fee: u64,
-    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
+    pub async fn withdraw(&self, sidechain: Sidechain, amount: u64, fee: u64) -> Result<String> {
         let amount = Amount::from_sat(amount);
         let fee = Amount::from_sat(fee);
-        match sidechain {
-            Sidechain::Zcash => {
-                ZcashClient::withdraw(&self.zcash, amount.into(), fee.into(), None).await
+        let id = match sidechain {
+            Sidechain::Zcash => ZcashClient::withdraw(&self.zcash, amount.into(), fee.into(), None)
+                .await?
+                .to_string(),
+            Sidechain::Ethereum => {
+                let account = self.get_ethereum_account().await?;
+                let amount: U256 = (amount.to_sat()).into();
+                let fee: U256 = (fee.to_sat()).into();
+                EthereumClient::withdraw(&self.ethereum, &account, &amount, &fee).await?
             }
-            Sidechain::Ethereum => todo!(),
-        }
+        };
+        Ok(id)
     }
 
-    pub async fn refund(
-        &self,
-        sidechain: Sidechain,
-        amount: u64,
-        fee: u64,
-    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
-        let amount = Amount::from_sat(amount);
-        let fee = Amount::from_sat(fee);
+    pub async fn refund(&self, sidechain: Sidechain, amount: u64, fee: u64) -> Result<()> {
         match sidechain {
             Sidechain::Zcash => {
-                ZcashClient::refund(&self.zcash, amount.into(), fee.into(), None, None).await
+                let amount = Amount::from_sat(amount);
+                let fee = Amount::from_sat(fee);
+                ZcashClient::refund(&self.zcash, amount.into(), fee.into(), None, None).await?;
             }
-            Sidechain::Ethereum => todo!(),
-        }
+            Sidechain::Ethereum => {
+                let mut unspent_withdrawals: Vec<(H256, U256)> =
+                    EthereumClient::get_unspent_withdrawals(&self.ethereum)
+                        .await?
+                        .iter()
+                        .map(|(id, uw)| (*id, uw.amount))
+                        .collect();
+                unspent_withdrawals.sort_by(|a, b| a.cmp(b));
+                let mut wei_amount: U256 = amount.into();
+                wei_amount *= SATOSHI;
+                let mut total_refund = U256::zero();
+                let mut refunded_withdrawals = HashSet::new();
+                dbg!(&unspent_withdrawals);
+                for (id, refund) in unspent_withdrawals.iter() {
+                    if total_refund > wei_amount {
+                        break;
+                    }
+                    total_refund += *refund;
+                    refunded_withdrawals.insert(id);
+                }
+                if total_refund < wei_amount {
+                    return Err(anyhow::Error::msg(
+                        "not enough funds in unspent withdrawals to refund",
+                    ));
+                }
+                let wei_change = total_refund - wei_amount;
+                for id in refunded_withdrawals.iter() {
+                    dbg!(id);
+                    EthereumClient::refund(&self.ethereum, id).await?;
+                }
+                let account = self.get_ethereum_account().await?;
+                let change: U256 = wei_change / SATOSHI;
+                let fee: U256 = fee.into();
+                // FIXME: Handle dust here.
+                if change > U256::zero() {
+                    EthereumClient::withdraw(&self.ethereum, &account, &change, &fee).await?;
+                }
+            }
+        };
+        Ok(())
     }
 
     /// This is used for setting up a new testing environment.

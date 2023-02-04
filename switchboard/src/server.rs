@@ -45,7 +45,7 @@ pub trait SwitchboardRpc {
         sidechain: Sidechain,
         amount: u64,
         fee: u64,
-    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error>;
+    ) -> Result<String, jsonrpsee::core::Error>;
 
     #[method(name = "refund")]
     async fn refund(
@@ -53,7 +53,7 @@ pub trait SwitchboardRpc {
         sidechain: Sidechain,
         amount: u64,
         fee: u64,
-    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error>;
+    ) -> Result<(), jsonrpsee::core::Error>;
 
     #[method(name = "main")]
     async fn main(
@@ -92,7 +92,7 @@ impl SwitchboardRpcServer for Switchboardd {
     }
 
     async fn getnewaddress(&self, chain: Chain) -> Result<String, jsonrpsee::core::Error> {
-        self.client.get_new_address(chain).await
+        Ok(self.client.get_new_address(chain).await?)
     }
 
     async fn deposit(
@@ -109,8 +109,9 @@ impl SwitchboardRpcServer for Switchboardd {
         sidechain: Sidechain,
         amount: u64,
         fee: u64,
-    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
-        self.client.withdraw(sidechain, amount, fee).await
+    ) -> Result<String, jsonrpsee::core::Error> {
+        let id = self.client.withdraw(sidechain, amount, fee).await?;
+        Ok(id)
     }
 
     async fn refund(
@@ -118,8 +119,9 @@ impl SwitchboardRpcServer for Switchboardd {
         sidechain: Sidechain,
         amount: u64,
         fee: u64,
-    ) -> Result<bitcoin::Txid, jsonrpsee::core::Error> {
-        self.client.refund(sidechain, amount, fee).await
+    ) -> Result<(), jsonrpsee::core::Error> {
+        self.client.refund(sidechain, amount, fee).await?;
+        Ok(())
     }
 
     async fn main(

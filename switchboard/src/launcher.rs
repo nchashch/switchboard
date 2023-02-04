@@ -100,12 +100,8 @@ pub async fn spawn_daemons(datadir: &Path, config: &Config) -> Result<Daemons> {
 }
 
 pub async fn download_binaries(datadir: &Path, url: &str) -> Result<()> {
-    download(
-        url,
-        datadir,
-        "49d3f4bdfbc98c0b93a18869bed917497620a917f3b3e75b455c4d16582f8ec3",
-    )
-    .await?;
+    const SHA256_DIGEST: &str = "f77b0f27fce2551995d926a031743651510a1dd42739a8d40bd2ff90401fb38a";
+    download(url, datadir, SHA256_DIGEST).await?;
     Ok(())
 }
 

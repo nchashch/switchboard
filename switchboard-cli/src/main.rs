@@ -29,7 +29,7 @@ enum Commands {
     Generate {
         number: usize,
         #[arg(value_parser = btc_amount_parser)]
-        amount: bitcoin::Amount,
+        amount: Option<bitcoin::Amount>,
     },
     /// Call zcash RPC directly
     Zcash {
@@ -59,7 +59,7 @@ enum Commands {
         amount: bitcoin::Amount,
         /// Deposit fee in BTC
         #[arg(value_parser = btc_amount_parser)]
-        fee: bitcoin::Amount,
+        fee: Option<bitcoin::Amount>,
     },
     /// Withdraw funds from a sidechain
     Withdraw {
@@ -70,7 +70,7 @@ enum Commands {
         amount: bitcoin::Amount,
         /// Withdrawal fee in BTC, determines withdrawal's priority in the bundle
         #[arg(value_parser = btc_amount_parser)]
-        fee: bitcoin::Amount,
+        fee: Option<bitcoin::Amount>,
     },
     /// Refund funds pending withdrawal back to a sidechain
     Refund {
@@ -81,7 +81,7 @@ enum Commands {
         amount: bitcoin::Amount,
         /// Withdrawal fee in BTC, determines change withdrawal's priority in the bundle
         #[arg(value_parser = btc_amount_parser)]
-        fee: bitcoin::Amount,
+        fee: Option<bitcoin::Amount>,
     },
 }
 
@@ -97,7 +97,18 @@ async fn main() -> Result<()> {
     let client = HttpClientBuilder::default().build(address)?;
     match args.commands {
         Commands::Generate { number, amount } => {
-            for hash in client.generate(number, amount.to_sat()).await? {
+            let hashes = client
+                .generate(
+                    number,
+                    amount
+                        .unwrap_or(bitcoin::Amount::from_btc(0.0001)?)
+                        .to_sat(),
+                )
+                .await?;
+            for hash in hashes[..hashes.len() - 1].iter() {
+                println!("{}", hash);
+            }
+            if let Some(hash) = hashes.last() {
                 print!("{}", hash);
             }
         }
@@ -170,6 +181,7 @@ async fn main() -> Result<()> {
             amount,
             fee,
         } => {
+            let fee = fee.unwrap_or(bitcoin::Amount::from_btc(0.0001)?);
             let txid = client
                 .deposit(sidechain, amount.to_sat(), fee.to_sat())
                 .await?;
@@ -183,6 +195,7 @@ async fn main() -> Result<()> {
             amount,
             fee,
         } => {
+            let fee = fee.unwrap_or(bitcoin::Amount::from_btc(0.0001)?);
             client
                 .withdraw(sidechain, amount.to_sat(), fee.to_sat())
                 .await?;
@@ -196,6 +209,7 @@ async fn main() -> Result<()> {
             amount,
             fee,
         } => {
+            let fee = fee.unwrap_or(bitcoin::Amount::from_btc(0.0001)?);
             client
                 .refund(sidechain, amount.to_sat(), fee.to_sat())
                 .await?;
