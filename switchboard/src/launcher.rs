@@ -100,7 +100,7 @@ pub async fn spawn_daemons(datadir: &Path, config: &Config) -> Result<Daemons> {
 }
 
 pub async fn download_binaries(datadir: &Path, url: &str) -> Result<()> {
-    const SHA256_DIGEST: &str = "f77b0f27fce2551995d926a031743651510a1dd42739a8d40bd2ff90401fb38a";
+    const SHA256_DIGEST: &str = "f4f4f8ac71796b82baef3aaf5f9a562c15a283d1ae943c4b61645aa887c6bfe2";
     download(url, datadir, SHA256_DIGEST).await?;
     Ok(())
 }
@@ -112,6 +112,14 @@ pub async fn download(url: &str, path: &Path, digest: &str) -> Result<()> {
     let tar = GzDecoder::new(content.reader());
     let mut archive = Archive::new(tar);
     archive.unpack(path)?;
+    Ok(())
+}
+
+pub async fn zcash_fetch_params(datadir: &Path) -> Result<()> {
+    let fetch_params = tokio::process::Command::new(datadir.join("bin/fetch-params.sh"))
+        .spawn()?
+        .wait()
+        .await?;
     Ok(())
 }
 

@@ -33,10 +33,13 @@ async fn main() -> Result<()> {
             .bin_download_url
             .unwrap_or("http://localhost:8080/bin.tar.gz".into());
         download_binaries(&datadir, &url).await?;
-        first_launch = true;
         if config.switchboard.regtest {
             ethereum_regtest_setup(&datadir).await?;
         }
+        first_launch = true;
+    }
+    if !home_dir.join(".zcash-params").exists() {
+        zcash_fetch_params(&datadir).await?;
     }
     let client = SidechainClient::new(&config)?;
     let Daemons {
