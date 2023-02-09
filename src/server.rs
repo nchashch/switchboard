@@ -69,6 +69,13 @@ pub trait SwitchboardRpc {
         params: Option<Vec<Value>>,
     ) -> Result<Value, jsonrpsee::core::Error>;
 
+    #[method(name = "ethereum")]
+    async fn ethereum(
+        &self,
+        method: String,
+        params: Option<Vec<Value>>,
+    ) -> Result<Value, jsonrpsee::core::Error>;
+
     #[method(name = "activatesidechains")]
     async fn activatesidechains(&self) -> Result<(), jsonrpsee::core::Error>;
 }
@@ -138,6 +145,14 @@ impl SwitchboardRpcServer for Switchboardd {
         params: Option<Vec<Value>>,
     ) -> Result<Value, jsonrpsee::core::Error> {
         self.client.zcash_request(method, params).await
+    }
+
+    async fn ethereum(
+        &self,
+        method: String,
+        params: Option<Vec<Value>>,
+    ) -> Result<Value, jsonrpsee::core::Error> {
+        self.client.ethereum_request(method, params).await
     }
 
     async fn activatesidechains(&self) -> Result<(), jsonrpsee::core::Error> {

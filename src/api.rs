@@ -177,6 +177,16 @@ impl SidechainClient {
             .await
     }
 
+    pub async fn ethereum_request(
+        &self,
+        method: String,
+        params: Option<Vec<Value>>,
+    ) -> Result<Value, jsonrpsee::core::Error> {
+        self.ethereum
+            .request(&method, Self::prepare_params(params))
+            .await
+    }
+
     pub async fn stop(&self) -> Result<Vec<String>, jsonrpsee::core::Error> {
         let zcash = ZcashClient::stop(&self.zcash).await;
         let main = MainClient::stop(&self.main).await;
@@ -381,5 +391,14 @@ impl SidechainClient {
         }
         MainClient::generate(&self.main, 200, None).await?;
         Ok(())
+    }
+}
+
+pub fn get_message(err: jsonrpsee::core::Error) -> String {
+    match err {
+        jsonrpsee::core::Error::Call(err) => jsonrpsee::types::ErrorObject::from(err)
+            .message()
+            .to_string(),
+        err => format!("{}", err),
     }
 }
