@@ -15,7 +15,9 @@ pub struct Daemons {
 fn spawn_main(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
     let main_datadir = datadir.join("data/main");
     std::fs::create_dir_all(&main_datadir)?;
-    let main = tokio::process::Command::new(datadir.join("bin/drivechaind"))
+    let default_bin = &datadir.join("bin/drivechaind");
+    let bin = config.main.bin.as_ref().unwrap_or(default_bin);
+    let main = tokio::process::Command::new(bin)
         .arg(format!("-datadir={}", main_datadir.display()))
         .arg(format!("-rpcport={}", config.main.port))
         .arg(format!("-rpcuser={}", config.switchboard.rpcuser))
@@ -36,9 +38,12 @@ fn spawn_zcash(datadir: &Path, config: &Config) -> Result<tokio::process::Child>
     std::fs::create_dir_all(&zcash_datadir)?;
     let zcash_conf_path = zcash_datadir.join("zcash.conf");
     let zcash_conf = "nuparams=5ba81b19:1
-nuparams=76b809bb:1";
+nuparams=76b809bb:1
+printtoconsole=1";
     std::fs::write(zcash_conf_path, zcash_conf)?;
-    let zcash = tokio::process::Command::new(datadir.join("bin/zcashd"))
+    let default_bin = &datadir.join("bin/zcashd");
+    let bin = config.zcash.bin.as_ref().unwrap_or(default_bin);
+    let zcash = tokio::process::Command::new(bin)
         .arg(format!("-datadir={}", zcash_datadir.display()))
         .arg(format!("-mainport={}", config.main.port))
         .arg(format!("-rpcport={}", config.zcash.port))
@@ -59,7 +64,9 @@ fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<tokio::process::Chi
     let ethereum_datadir = datadir.join("data/ethereum");
     std::fs::create_dir_all(&ethereum_datadir)?;
     let ethereum_conf_path = ethereum_datadir.join("ethereum.conf");
-    let ethereum = tokio::process::Command::new(datadir.join("bin/geth"))
+    let default_bin = &datadir.join("bin/geth");
+    let bin = config.ethereum.bin.as_ref().unwrap_or(default_bin);
+    let ethereum = tokio::process::Command::new(bin)
         .arg(format!("--datadir={}", ethereum_datadir.display()))
         .arg(format!("--http.port={}", config.ethereum.port))
         .arg(format!("--main.port={}", config.main.port))
@@ -67,6 +74,7 @@ fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<tokio::process::Chi
         .arg("--http.api=eth,web3,personal,net")
         .arg("--maxpeers=0")
         .arg("--dev")
+        .arg("--verbosity=0")
         .spawn()?;
     Ok(ethereum)
 }
@@ -127,7 +135,7 @@ pub async fn ethereum_regtest_setup(datadir: &Path) -> Result<()> {
     const GENESIS_JSON: &str = r#"
 {
 "config": {
-    "chainId": 1337,
+    "chainId": 5123,
     "homesteadBlock": 0,
     "eip150Block": 0,
     "eip155Block": 0,

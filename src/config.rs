@@ -1,9 +1,10 @@
 use serde_derive::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use std::path::PathBuf;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ChainConfig {
-    // pub bin: PathBuf,
+    pub bin: Option<PathBuf>,
     pub port: u16,
 }
 
@@ -54,12 +55,15 @@ impl Default for Config {
             },
             main: ChainConfig {
                 port: 18443,
+                bin: None,
             },
             zcash: ChainConfig {
                 port: 19000,
+                bin: None,
             },
             ethereum: ChainConfig {
                 port: 19001,
+                bin: None,
             },
         }
     }
