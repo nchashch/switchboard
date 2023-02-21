@@ -17,6 +17,6 @@ bytes = "1.3.0"
 flate2 = "1.0.25"
 tar = "0.4.38"
 hex = "0.4.3"
-ureq-jsonrpc = { path = "../ureq-jsonrpc" }
+ureq-jsonrpc = { git = "https://github.com/nchashch/ureq-jsonrpc" }
 dirs = "4.0.0"
 ureq = "2.6.2"
