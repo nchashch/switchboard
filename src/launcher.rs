@@ -36,6 +36,11 @@ impl Daemons {
     }
 
     pub fn stop(&mut self) -> Result<()> {
+        std::process::Command::new("kill")
+            .args(["-s", "INT", &self.ethereum.id().to_string()])
+            .spawn()
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_secs(1));
         self.client.stop()?;
         self.zcash.wait()?;
         self.main.wait()?;
@@ -56,7 +61,7 @@ impl Daemons {
             client.stop()?;
             let ethereum_pid = ethereum.as_ref().unwrap().id();
             std::process::Command::new("kill")
-                .args(["-s", "HUP", &ethereum_pid.to_string()])
+                .args(["-s", "INT", &ethereum_pid.to_string()])
                 .spawn()?
                 .wait()?;
         }
