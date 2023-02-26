@@ -163,7 +163,7 @@ fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<std::process::Child
 }
 
 pub fn download_binaries(datadir: &Path, url: &str) -> Result<()> {
-    const SHA256_DIGEST: &str = "f4f4f8ac71796b82baef3aaf5f9a562c15a283d1ae943c4b61645aa887c6bfe2";
+    const SHA256_DIGEST: &str = "adeca73e0b5e08e74b4ef20c057319bcc85fab8453deee677b74c060d3e89e29";
     download(url, datadir, SHA256_DIGEST)?;
     Ok(())
 }
