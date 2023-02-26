@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ChainConfig {
+    pub verbose: bool,
     pub bin: Option<PathBuf>,
     pub port: u16,
 }
@@ -56,14 +57,17 @@ impl Default for Config {
             main: ChainConfig {
                 port: 18443,
                 bin: None,
+                verbose: false,
             },
             zcash: ChainConfig {
                 port: 19000,
                 bin: None,
+                verbose: false,
             },
             ethereum: ChainConfig {
                 port: 19001,
                 bin: None,
+                verbose: false,
             },
         }
     }

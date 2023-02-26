@@ -35,7 +35,7 @@ impl Daemons {
         Ok(daemons)
     }
 
-    pub fn stop(&mut self) -> Result<()> {
+    fn stop(&mut self) -> Result<()> {
         std::process::Command::new("kill")
             .args(["-s", "INT", &self.ethereum.id().to_string()])
             .spawn()
@@ -94,6 +94,13 @@ fn spawn_main(datadir: &Path, config: &Config) -> Result<std::process::Child> {
                 false => 0,
             }
         ))
+        .arg(format!(
+            "-printtoconsole={}",
+            match config.zcash.verbose {
+                true => 1,
+                false => 0,
+            }
+        ))
         .spawn()?;
     Ok(main)
 }
@@ -103,8 +110,7 @@ fn spawn_zcash(datadir: &Path, config: &Config) -> Result<std::process::Child> {
     std::fs::create_dir_all(&zcash_datadir)?;
     let zcash_conf_path = zcash_datadir.join("zcash.conf");
     let zcash_conf = "nuparams=5ba81b19:1
-nuparams=76b809bb:1
-printtoconsole=1";
+nuparams=76b809bb:1";
     std::fs::write(zcash_conf_path, zcash_conf)?;
     let default_bin = &datadir.join("bin/zcashd");
     let bin = config.zcash.bin.as_ref().unwrap_or(default_bin);
@@ -117,6 +123,13 @@ printtoconsole=1";
         .arg(format!(
             "-regtest={}",
             match config.switchboard.regtest {
+                true => 1,
+                false => 0,
+            }
+        ))
+        .arg(format!(
+            "-printtoconsole={}",
+            match config.zcash.verbose {
                 true => 1,
                 false => 0,
             }
@@ -138,13 +151,19 @@ fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<std::process::Child
         .arg("--http.api=eth,web3,personal,net")
         .arg("--maxpeers=0")
         .arg("--dev")
-        .arg("--verbosity=0")
+        .arg(format!(
+            "--verbosity={}",
+            match config.ethereum.verbose {
+                true => 3,
+                false => 0,
+            }
+        ))
         .spawn()?;
     Ok(ethereum)
 }
 
 pub fn download_binaries(datadir: &Path, url: &str) -> Result<()> {
-    const SHA256_DIGEST: &str = "adeca73e0b5e08e74b4ef20c057319bcc85fab8453deee677b74c060d3e89e29";
+    const SHA256_DIGEST: &str = "f4f4f8ac71796b82baef3aaf5f9a562c15a283d1ae943c4b61645aa887c6bfe2";
     download(url, datadir, SHA256_DIGEST)?;
     Ok(())
 }

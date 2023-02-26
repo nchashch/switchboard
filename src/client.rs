@@ -15,14 +15,14 @@ impl SidechainClient {
             port: config.main.port,
             user: config.switchboard.rpcuser.clone(),
             password: config.switchboard.rpcpassword.clone(),
-            id: "switchboard-cli".to_string(),
+            id: "switchboard".to_string(),
         };
         let zcash = ureq_jsonrpc::Client {
             host: "localhost".to_string(),
             port: config.zcash.port,
             user: config.switchboard.rpcuser.clone(),
             password: config.switchboard.rpcpassword.clone(),
-            id: "switchboard-cli".to_string(),
+            id: "switchboard".to_string(),
         };
         Ok(SidechainClient { main, zcash })
     }
@@ -37,12 +37,13 @@ impl SidechainClient {
     pub fn activate_sidechains(&self) -> Result<(), ureq_jsonrpc::Error> {
         let active_sidechains = [(0, "zcash"), (1, "ethereum")];
         for (sidechain_number, sidechain_name) in active_sidechains {
-            self.main.send_request(
+            self.main.send_request::<ureq_jsonrpc::Value>(
                 "createsidechainproposal",
                 &[json!(sidechain_number), json!(sidechain_name)],
             )?;
         }
-        self.main.send_request("generate", &[json!(200)])?;
+        self.main
+            .send_request::<ureq_jsonrpc::Value>("generate", &[json!(200)])?;
         Ok(())
     }
 }
