@@ -1,6 +1,5 @@
 pub mod config;
 pub mod launcher;
-mod client;
 
 pub fn format_deposit_address(sidechain_number: usize, address: String) -> String {
     let deposit_address: String = format!("s{}_{}_", sidechain_number, address);

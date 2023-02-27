@@ -41,6 +41,8 @@ impl SwitchboardConfig {
 pub struct Config {
     pub switchboard: SwitchboardConfig,
     pub main: ChainConfig,
+    pub testchain: ChainConfig,
+    pub bitassets: ChainConfig,
     pub zcash: ChainConfig,
     pub ethereum: ChainConfig,
 }
@@ -59,13 +61,23 @@ impl Default for Config {
                 bin: None,
                 verbose: false,
             },
-            zcash: ChainConfig {
+            testchain: ChainConfig {
                 port: 19000,
                 bin: None,
                 verbose: false,
             },
+            bitassets: ChainConfig {
+                port: 19004,
+                bin: None,
+                verbose: false,
+            },
+            zcash: ChainConfig {
+                port: 19005,
+                bin: None,
+                verbose: false,
+            },
             ethereum: ChainConfig {
-                port: 19001,
+                port: 19006,
                 bin: None,
                 verbose: false,
             },

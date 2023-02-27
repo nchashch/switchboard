@@ -1,83 +1,103 @@
-use crate::client::SidechainClient;
 use crate::config::Config;
 use anyhow::Result;
 use bytes::Buf;
 use flate2::read::GzDecoder;
 use std::path::Path;
 use tar::Archive;
+use ureq_jsonrpc::json;
 
-pub struct Daemons {
-    client: SidechainClient,
-    main: std::process::Child,
-    zcash: std::process::Child,
-    ethereum: std::process::Child,
-}
-
-impl Daemons {
-    pub fn start(url: &str, datadir: &Path, config: &Config) -> Result<Daemons> {
-        let mut first_launch = false;
-        if !datadir.join("bin").exists() {
-            download_binaries(&datadir, url)?;
-            if config.switchboard.regtest {
-                ethereum_regtest_setup(&datadir)?;
+pub fn spawn_bitassets_qt(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+    let main_datadir = datadir.join("data/main");
+    let bitassets_datadir = datadir.join("data/bitassets");
+    std::fs::create_dir_all(&bitassets_datadir)?;
+    let default_bin = &datadir.join("bin/bitassets-qt");
+    let bin = config.bitassets.bin.as_ref().unwrap_or(default_bin);
+    let bitassets = std::process::Command::new(bin)
+        .arg("-server=1")
+        .arg(format!("-drivechain-datadir={}", main_datadir.display()))
+        .arg(format!("-datadir={}", bitassets_datadir.display()))
+        .arg(format!("-rpcport={}", config.bitassets.port))
+        .arg(format!("-rpcuser={}", config.switchboard.rpcuser))
+        .arg(format!("-rpcpassword={}", config.switchboard.rpcpassword))
+        .arg(format!(
+            "-regtest={}",
+            match config.switchboard.regtest {
+                true => 1,
+                false => 0,
             }
-            first_launch = true;
-        }
-        let home_dir = dirs::home_dir().unwrap();
-        if !home_dir.join(".zcash-params").exists() {
-            zcash_fetch_params(&datadir)?;
-        }
-        let daemons = Self::spawn(datadir, config)?;
-        std::thread::sleep(std::time::Duration::from_secs(1));
-        if config.switchboard.regtest && first_launch {
-            daemons.client.activate_sidechains()?;
-        }
-        Ok(daemons)
-    }
-
-    fn stop(&mut self) -> Result<()> {
-        std::process::Command::new("kill")
-            .args(["-s", "INT", &self.ethereum.id().to_string()])
-            .spawn()
-            .unwrap();
-        std::thread::sleep(std::time::Duration::from_secs(1));
-        self.client.stop()?;
-        self.zcash.wait()?;
-        self.main.wait()?;
-        self.ethereum.wait()?;
-        Ok(())
-    }
-
-    fn spawn(datadir: &Path, config: &Config) -> Result<Daemons> {
-        std::fs::create_dir_all(datadir)?;
-        let main = spawn_main(datadir, config);
-        let zcash = spawn_zcash(datadir, config);
-        // FIXME: This is a temporary hack to ensure geth launches after mainchain.
-        // If mainchain isn't running when geth is launched, geth crashes.
-        std::thread::sleep(std::time::Duration::from_secs(3));
-        let ethereum = spawn_ethereum(datadir, config);
-        let client = SidechainClient::new(config)?;
-        if [&main, &zcash, &ethereum].iter().any(|r| r.is_err()) {
-            client.stop()?;
-            let ethereum_pid = ethereum.as_ref().unwrap().id();
-            std::process::Command::new("kill")
-                .args(["-s", "INT", &ethereum_pid.to_string()])
-                .spawn()?
-                .wait()?;
-        }
-        let main = main?;
-        let zcash = zcash?;
-        let ethereum = ethereum?;
-        Ok(Daemons {
-            client,
-            main,
-            zcash,
-            ethereum,
-        })
-    }
+        ))
+        .arg(format!(
+            "-printtoconsole={}",
+            match config.zcash.verbose {
+                true => 1,
+                false => 0,
+            }
+        ))
+        .spawn()?;
+    Ok(bitassets)
 }
 
-fn spawn_main(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub fn spawn_testchain_qt(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+    let main_datadir = datadir.join("data/main");
+    let testchain_datadir = datadir.join("data/testchain");
+    std::fs::create_dir_all(&testchain_datadir)?;
+    let default_bin = &datadir.join("bin/testchain-qt");
+    let bin = config.testchain.bin.as_ref().unwrap_or(default_bin);
+    let testchain = std::process::Command::new(bin)
+        .arg("-server=1")
+        .arg(format!("-drivechain-datadir={}", main_datadir.display()))
+        .arg(format!("-datadir={}", testchain_datadir.display()))
+        .arg(format!("-rpcport={}", config.testchain.port))
+        .arg(format!("-rpcuser={}", config.switchboard.rpcuser))
+        .arg(format!("-rpcpassword={}", config.switchboard.rpcpassword))
+        .arg(format!(
+            "-regtest={}",
+            match config.switchboard.regtest {
+                true => 1,
+                false => 0,
+            }
+        ))
+        .arg(format!(
+            "-printtoconsole={}",
+            match config.zcash.verbose {
+                true => 1,
+                false => 0,
+            }
+        ))
+        .spawn()?;
+    Ok(testchain)
+}
+
+pub fn spawn_main_qt(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+    let main_datadir = datadir.join("data/main");
+    std::fs::create_dir_all(&main_datadir)?;
+    let default_bin = &datadir.join("bin/drivechain-qt");
+    let bin = config.main.bin.as_ref().unwrap_or(default_bin);
+    let main = std::process::Command::new(bin)
+        .arg("-server=1")
+        .arg(format!("-datadir={}", main_datadir.display()))
+        .arg(format!("-rpcport={}", config.main.port))
+        .arg(format!("-rpcuser={}", config.switchboard.rpcuser))
+        .arg(format!("-rpcpassword={}", config.switchboard.rpcpassword))
+        .arg(format!(
+            "-regtest={}",
+            match config.switchboard.regtest {
+                true => 1,
+                false => 0,
+            }
+        ))
+        .arg(format!(
+            "-printtoconsole={}",
+            match config.zcash.verbose {
+                true => 1,
+                false => 0,
+            }
+        ))
+        .spawn()?;
+    Ok(main)
+}
+
+pub fn spawn_main(datadir: &Path, config: &Config) -> Result<std::process::Child> {
     let main_datadir = datadir.join("data/main");
     std::fs::create_dir_all(&main_datadir)?;
     let default_bin = &datadir.join("bin/drivechaind");
@@ -105,7 +125,7 @@ fn spawn_main(datadir: &Path, config: &Config) -> Result<std::process::Child> {
     Ok(main)
 }
 
-fn spawn_zcash(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub fn spawn_zcash(datadir: &Path, config: &Config) -> Result<std::process::Child> {
     let zcash_datadir = datadir.join("data/zcash");
     std::fs::create_dir_all(&zcash_datadir)?;
     let zcash_conf_path = zcash_datadir.join("zcash.conf");
@@ -138,7 +158,7 @@ nuparams=76b809bb:1";
     Ok(zcash)
 }
 
-fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<std::process::Child> {
     let ethereum_datadir = datadir.join("data/ethereum");
     std::fs::create_dir_all(&ethereum_datadir)?;
     let default_bin = &datadir.join("bin/geth");
@@ -219,6 +239,25 @@ pub fn ethereum_regtest_setup(datadir: &Path) -> Result<()> {
         .arg(format!("--datadir={}", ethereum_datadir.display()))
         .arg("init")
         .arg(format!("{}", genesis_json_path.display()))
-        .spawn()?;
+        .spawn()?
+        .wait()?;
+    Ok(())
+}
+
+/// This is used for setting up a new testing environment.
+pub fn activate_sidechains(main_client: &ureq_jsonrpc::Client) -> Result<(), ureq_jsonrpc::Error> {
+    let active_sidechains = [
+        (0, "testchain"),
+        (4, "bitassets"),
+        (5, "zcash"),
+        (6, "ethereum"),
+    ];
+    for (sidechain_number, sidechain_name) in active_sidechains {
+        main_client.send_request::<ureq_jsonrpc::Value>(
+            "createsidechainproposal",
+            &[json!(sidechain_number), json!(sidechain_name)],
+        )?;
+    }
+    main_client.send_request::<ureq_jsonrpc::Value>("generate", &[json!(200)])?;
     Ok(())
 }
