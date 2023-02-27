@@ -182,9 +182,8 @@ pub fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<std::process::C
     Ok(ethereum)
 }
 
-pub fn download_binaries(datadir: &Path, url: &str) -> Result<()> {
-    const SHA256_DIGEST: &str = "adeca73e0b5e08e74b4ef20c057319bcc85fab8453deee677b74c060d3e89e29";
-    download(url, datadir, SHA256_DIGEST)?;
+pub fn download_binaries(datadir: &Path, url: &str, digest: &str) -> Result<()> {
+    download(url, datadir, digest)?;
     Ok(())
 }
 
