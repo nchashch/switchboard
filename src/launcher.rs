@@ -2,17 +2,17 @@ use crate::config::Config;
 use anyhow::Result;
 use bytes::Buf;
 use flate2::read::GzDecoder;
+use jsonrpsee::{core::client::ClientT, rpc_params};
 use std::path::Path;
 use tar::Archive;
-use ureq_jsonrpc::json;
 
-pub fn spawn_bitassets_qt(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub async fn spawn_bitassets_qt(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
     let main_datadir = datadir.join("data/main");
     let bitassets_datadir = datadir.join("data/bitassets");
     std::fs::create_dir_all(&bitassets_datadir)?;
     let default_bin = &datadir.join("bin/bitassets-qt");
     let bin = config.bitassets.bin.as_ref().unwrap_or(default_bin);
-    let bitassets = std::process::Command::new(bin)
+    let bitassets = tokio::process::Command::new(bin)
         .arg("-server=1")
         .arg(format!("-drivechain-datadir={}", main_datadir.display()))
         .arg(format!("-datadir={}", bitassets_datadir.display()))
@@ -37,13 +37,13 @@ pub fn spawn_bitassets_qt(datadir: &Path, config: &Config) -> Result<std::proces
     Ok(bitassets)
 }
 
-pub fn spawn_testchain_qt(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub async fn spawn_testchain_qt(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
     let main_datadir = datadir.join("data/main");
     let testchain_datadir = datadir.join("data/testchain");
     std::fs::create_dir_all(&testchain_datadir)?;
     let default_bin = &datadir.join("bin/testchain-qt");
     let bin = config.testchain.bin.as_ref().unwrap_or(default_bin);
-    let testchain = std::process::Command::new(bin)
+    let testchain = tokio::process::Command::new(bin)
         .arg("-server=1")
         .arg(format!("-drivechain-datadir={}", main_datadir.display()))
         .arg(format!("-datadir={}", testchain_datadir.display()))
@@ -68,12 +68,12 @@ pub fn spawn_testchain_qt(datadir: &Path, config: &Config) -> Result<std::proces
     Ok(testchain)
 }
 
-pub fn spawn_main_qt(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub async fn spawn_main_qt(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
     let main_datadir = datadir.join("data/main");
     std::fs::create_dir_all(&main_datadir)?;
     let default_bin = &datadir.join("bin/drivechain-qt");
     let bin = config.main.bin.as_ref().unwrap_or(default_bin);
-    let main = std::process::Command::new(bin)
+    let main = tokio::process::Command::new(bin)
         .arg("-server=1")
         .arg(format!("-datadir={}", main_datadir.display()))
         .arg(format!("-rpcport={}", config.main.port))
@@ -97,12 +97,12 @@ pub fn spawn_main_qt(datadir: &Path, config: &Config) -> Result<std::process::Ch
     Ok(main)
 }
 
-pub fn spawn_main(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub async fn spawn_main(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
     let main_datadir = datadir.join("data/main");
     std::fs::create_dir_all(&main_datadir)?;
     let default_bin = &datadir.join("bin/drivechaind");
     let bin = config.main.bin.as_ref().unwrap_or(default_bin);
-    let main = std::process::Command::new(bin)
+    let main = tokio::process::Command::new(bin)
         .arg(format!("-datadir={}", main_datadir.display()))
         .arg(format!("-rpcport={}", config.main.port))
         .arg(format!("-rpcuser={}", config.switchboard.rpcuser))
@@ -125,7 +125,7 @@ pub fn spawn_main(datadir: &Path, config: &Config) -> Result<std::process::Child
     Ok(main)
 }
 
-pub fn spawn_zcash(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub async fn spawn_zcash(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
     let zcash_datadir = datadir.join("data/zcash");
     std::fs::create_dir_all(&zcash_datadir)?;
     let zcash_conf_path = zcash_datadir.join("zcash.conf");
@@ -134,7 +134,7 @@ nuparams=76b809bb:1";
     std::fs::write(zcash_conf_path, zcash_conf)?;
     let default_bin = &datadir.join("bin/zcashd");
     let bin = config.zcash.bin.as_ref().unwrap_or(default_bin);
-    let zcash = std::process::Command::new(bin)
+    let zcash = tokio::process::Command::new(bin)
         .arg(format!("-datadir={}", zcash_datadir.display()))
         .arg(format!("-mainport={}", config.main.port))
         .arg(format!("-rpcport={}", config.zcash.port))
@@ -158,12 +158,12 @@ nuparams=76b809bb:1";
     Ok(zcash)
 }
 
-pub fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<std::process::Child> {
+pub async fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<tokio::process::Child> {
     let ethereum_datadir = datadir.join("data/ethereum");
     std::fs::create_dir_all(&ethereum_datadir)?;
     let default_bin = &datadir.join("bin/geth");
     let bin = config.ethereum.bin.as_ref().unwrap_or(default_bin);
-    let ethereum = std::process::Command::new(bin)
+    let ethereum = tokio::process::Command::new(bin)
         .arg(format!("--datadir={}", ethereum_datadir.display()))
         .arg(format!("--http.port={}", config.ethereum.port))
         .arg(format!("--main.port={}", config.main.port))
@@ -182,27 +182,28 @@ pub fn spawn_ethereum(datadir: &Path, config: &Config) -> Result<std::process::C
     Ok(ethereum)
 }
 
-pub fn download_binaries(datadir: &Path, url: &str, digest: &str) -> Result<()> {
-    download(url, datadir, digest)?;
+pub async fn download_binaries(datadir: &Path, url: &str, digest: &str) -> Result<()> {
+    download(url, datadir, digest).await?;
     Ok(())
 }
 
-pub fn download(url: &str, path: &Path, digest: &str) -> Result<()> {
-    let resp = ureq::get(url).call()?;
-    let len: usize = resp.header("Content-Length").unwrap().parse()?;
-    let mut content: Vec<u8> = Vec::with_capacity(len);
-    resp.into_reader().read_to_end(&mut content)?;
-    assert_eq!(sha256::digest(content.as_slice()), digest);
+pub async fn download(url: &str, path: &Path, digest: &str) -> Result<()> {
+    let client = hyper::Client::new();
+    let url = url.parse()?;
+    let resp = client.get(url).await?;
+    let content = hyper::body::to_bytes(resp.into_body()).await?;
+    assert_eq!(sha256::digest(content.as_ref()), digest);
     let tar = GzDecoder::new(content.reader());
     let mut archive = Archive::new(tar);
     archive.unpack(path)?;
     Ok(())
 }
 
-pub fn zcash_fetch_params(datadir: &Path) -> Result<()> {
-    std::process::Command::new(datadir.join("bin/fetch-params.sh"))
+pub async fn zcash_fetch_params(datadir: &Path) -> Result<()> {
+    tokio::process::Command::new(datadir.join("bin/fetch-params.sh"))
         .spawn()?
-        .wait()?;
+        .wait()
+        .await?;
     Ok(())
 }
 
@@ -244,7 +245,13 @@ pub fn ethereum_regtest_setup(datadir: &Path) -> Result<()> {
 }
 
 /// This is used for setting up a new testing environment.
-pub fn activate_sidechains(main_client: &ureq_jsonrpc::Client) -> Result<(), ureq_jsonrpc::Error> {
+pub async fn activate_sidechains(config: &Config) -> Result<()> {
+    // Build custom headers used for every submitted request.
+    let mut headers = jsonrpsee::http_client::HeaderMap::new();
+    headers.insert("Authorization", config.switchboard.basic_auth()?);
+    let client = jsonrpsee::http_client::HttpClientBuilder::default()
+        .set_headers(headers)
+        .build("http://localhost:18443")?;
     let active_sidechains = [
         (0, "testchain"),
         (4, "bitassets"),
@@ -252,11 +259,13 @@ pub fn activate_sidechains(main_client: &ureq_jsonrpc::Client) -> Result<(), ure
         (6, "ethereum"),
     ];
     for (sidechain_number, sidechain_name) in active_sidechains {
-        main_client.send_request::<ureq_jsonrpc::Value>(
-            "createsidechainproposal",
-            &[json!(sidechain_number), json!(sidechain_name)],
-        )?;
+        client
+            .request(
+                "createsidechainproposal",
+                rpc_params![sidechain_number, sidechain_name],
+            )
+            .await?;
     }
-    main_client.send_request::<ureq_jsonrpc::Value>("generate", &[json!(200)])?;
+    client.request("generate", rpc_params![200]).await?;
     Ok(())
 }
