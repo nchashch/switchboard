@@ -45,6 +45,7 @@ pub struct Config {
     pub bitassets: ChainConfig,
     pub zcash: ChainConfig,
     pub ethereum: ChainConfig,
+    pub bitnames: ChainConfig,
 }
 
 impl Default for Config {
@@ -78,6 +79,11 @@ impl Default for Config {
             },
             ethereum: ChainConfig {
                 port: 19006,
+                bin: None,
+                verbose: false,
+            },
+            bitnames: ChainConfig {
+                port: 19007,
                 bin: None,
                 verbose: false,
             },
